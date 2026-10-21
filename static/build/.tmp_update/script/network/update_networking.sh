@@ -167,6 +167,7 @@ wifi_on() {
     /customer/app/axp_test wifion
     sleep 2
     ifconfig wlan0 up
+    $sysdir/script/network/wpa_scan_ssid.sh
     $miyoodir/app/wpa_supplicant -B -D nl80211 -iwlan0 -c /appconfigs/wpa_supplicant.conf
     udhcpc -i wlan0 -s /etc/init.d/udhcpc.script &
     iw dev wlan0 set power_save off
