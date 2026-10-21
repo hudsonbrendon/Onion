@@ -701,8 +701,12 @@ int main(void)
 
             if (val != REPEAT) {
 
-                if (ev.code == HW_BTN_MENU)
+                if (ev.code == HW_BTN_MENU) {
                     b_BTN_Menu_Pressed = val == PRESSED;
+                    // MENU+A / MENU+B hold combos need MENU held the whole time (#1684)
+                    if (!b_BTN_Menu_Pressed)
+                        menuAndAPressed = menuAndBPressed = false;
+                }
                 else
                     b_BTN_Not_Menu_Pressed = val == PRESSED;
 
