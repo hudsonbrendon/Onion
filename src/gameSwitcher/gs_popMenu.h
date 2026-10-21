@@ -42,7 +42,7 @@ void popMenu_destroy(void)
     // _scan_thread() call setLoadPreview() after list_free(), which could
     // access freed ListItem storage and crash on a later popup open.
     popMenu_finishScan(false);
-    list_free(&appState.pop_menu_list);
+    list_free(&appState.pop_menu_list, NULL);
     appState.pop_menu_list = (List){0};
 }
 
