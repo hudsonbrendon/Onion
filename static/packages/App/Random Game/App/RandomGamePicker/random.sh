@@ -49,4 +49,9 @@ else
     recentFileLine="{\"label\":\"$label\",\"rompath\":\"$rompath\",\"launch\":\"$launchpath\",\"type\":5}"
 fi
 
-echo "$recentFileLine" | cat - $currentrecentlist > $recentlist_temp && mv $recentlist_temp $currentrecentlist
+# Put the game on top, dropping the "Random Game" app entry MainUI added on
+# launch and any older entry of the same game
+{
+    echo "$recentFileLine"
+    grep -v -F -e "/App/RandomGamePicker/" -e "\"rompath\":\"$rompath\"" $currentrecentlist 2> /dev/null || :
+} > $recentlist_temp && mv $recentlist_temp $currentrecentlist
