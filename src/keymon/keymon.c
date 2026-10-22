@@ -803,6 +803,8 @@ int main(void)
                 if (val == PRESSED) {
                     switch (button_flag & (SELECT | START)) {
                     case START:
+                        if (config_flag_get(".noAudioBoostHotkey"))
+                            break;
                         // START + L2 : audio boost down / + R2 : reset volume
                         if (button_flag & R2)
                             setVolume(settings.volume);
@@ -841,6 +843,8 @@ int main(void)
                 if (val == PRESSED) {
                     switch (button_flag & (SELECT | START)) {
                     case START:
+                        if (config_flag_get(".noAudioBoostHotkey"))
+                            break;
                         // START + R2 : audio boost up / + L2 : reset volume
                         if (button_flag & L2)
                             setVolume(settings.volume);
@@ -897,7 +901,7 @@ int main(void)
                 break;
             case HW_BTN_B:
                 if (val == PRESSED) {
-                    if (b_BTN_Menu_Pressed) {
+                    if (b_BTN_Menu_Pressed && !config_flag_get(".noBlueLightHotkey")) {
                         menuAndBPressed = true;
                         menuAndBPressedTime = getMilliseconds();
                     }
