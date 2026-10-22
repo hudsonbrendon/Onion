@@ -36,6 +36,8 @@ It also allows you to quickly change games and many other features:
 - Improved *Sleep Mode* with full game suspension (press <kbd>POWER</kbd>)
 - Low battery indicator: Red frame when <15% (can be adjusted in Tweaks)
 - When the battery goes below 4%, the device will automatically save and exit to prevent losing progress
+- Saving from the GameSwitcher writes to the save state slot currently selected in RetroArch, and the load footer shows the real slot number (e.g. `Slot 5  1/3`)
+- When a game has no screenshot or box art, the save state thumbnail is shown instead
 
 ## Usage
 

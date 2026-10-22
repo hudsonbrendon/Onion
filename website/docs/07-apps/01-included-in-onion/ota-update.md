@@ -33,5 +33,6 @@ Once installed run it from Apps section.
 - displays the size of the release before downloading
 - verify the size of the downloaded file before applying
 - check the current space available before applying update (currently 1GB is required)
-- check disk integrity with fsck.fat, important to avoid SD card FAT file system corruption
+- optionally check disk integrity with fsck.fat before downloading, important to avoid SD card FAT file system corruption (you are asked first, default is *Yes*; it can take about 2 minutes on a 128GB card)
+- refuse to apply the update unless the device is charging or the battery is at least 50% (a *Retry*/*Cancel* prompt is shown), since a battery dying mid-update leaves a card that no longer boots
 - generate different exit error codes

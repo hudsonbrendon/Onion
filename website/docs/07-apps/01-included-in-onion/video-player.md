@@ -106,8 +106,6 @@ Many formats are supported, after a few tests a little everything below 1080p is
 
 #### Original repositories
 
-Improving on the [Steward-fu release](https://steward-fu.github.io/website/handheld/miyoo-mini/parasyte_build_ffplay.htm), the dependency on Parasyte is now removed with only necessary libraries included.  
-
-- [Original compilation by Steward Fu](https://steward-fu.github.io/website/handheld/miyoo-mini/parasyte_build_ffplay.htm)
+Improving on the Steward-fu release (original page no longer online), the dependency on Parasyte is now removed with only necessary libraries included.  
 
 - [Edited by BoboTraX](https://github.com/bobotrax/ffplay_Miyoo)

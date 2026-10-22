@@ -11,7 +11,7 @@ slug: /dev/setup
 
 The build environment is based on [Shaun Inman's docker image](https://github.com/shauninman/union-miyoomini-toolchain).
 
-We recommend to use a Linux VM with Docker installed. For example you can use [VMware Workstation Player](https://www.vmware.com/fr/products/workstation-player.html) or [VirtualBox](https://www.virtualbox.org/wiki/Downloads).
+We recommend to use a Linux VM with Docker installed. For example you can use [VMware Workstation](https://www.vmware.com/products/desktop-hypervisor/workstation-and-fusion) or [VirtualBox](https://www.virtualbox.org/wiki/Downloads).
 
 You can find pre-installed Linux images on [linuxvmimages.com](https://www.linuxvmimages.com/)
 

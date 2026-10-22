@@ -70,7 +70,6 @@ If you don't want to scrape your own ROM collection you can use the premade snap
 
 Download AdvanceMAME snap Pack (https://www.advancemame.it/download). There are 8 packs with sound, or 1 without sound.
 
-Download Tiny Best Set Snap Pack 12 GB ([GDRIVE](https://drive.google.com/file/d/1KoHhrSxNa3u--W2rhGIwRdPQguP52tqD/view?usp=sharing)).
 
 
 

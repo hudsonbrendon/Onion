@@ -60,7 +60,7 @@ It is no longer necessary to include the following fonts in your theme, just poi
 
 > ![Exo-2-Bold-Italic.ttf](https://user-images.githubusercontent.com/44569252/180785009-27df242d-6b42-4a09-9291-2694026abda3.png)
 
-<sup><a href="https://www.ndiscover.com/exo-2-0/">Download Exo 2</a> • <a href="https://www.fontsquirrel.com/license/exo-2">OFL License</a></sup>
+<sup><a href="https://fonts.google.com/specimen/Exo+2">Download Exo 2</a> • <a href="https://www.fontsquirrel.com/license/exo-2">OFL License</a></sup>
 
 
 **Helvetica Neue**  
