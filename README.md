@@ -4,6 +4,8 @@
 
 *An enhanced operating system for your Miyoo Mini and Mini+, featuring fine-tuned emulation with 100+ built-in emulators, auto-save and resume, a wealth of customization options, and much more. Performant, reliable, and straightforward retro gaming right in your pocket.*
 
+> **Community fork.** This fork of [OnionUI/Onion](https://github.com/OnionUI/Onion) integrates pending upstream pull requests and fixes long-standing issues while upstream releases are stalled. Releases and OTA updates come from [hudsonbrendon/Onion](https://github.com/hudsonbrendon/Onion/releases). See [ROADMAP.md](ROADMAP.md) for what is planned.
+
 <p>&nbsp;</p>
 
 <p align="center">

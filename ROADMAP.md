@@ -3,6 +3,14 @@
 Levantamento feito em 21/10/2026 a partir de `OnionUI/Onion`: 113 issues abertas e 39 PRs abertos.
 Foco: Miyoo Mini Plus (MMP).
 
+## Status (21/10/2026)
+
+- **Fase 0 concluída:** CI do fork ativo, versão `4.5.0-hb1`, OTA aponta pras releases de `hudsonbrendon/Onion`, nota de fork no README.
+- **Fase 1 concluída:** 31 PRs do upstream integrados (branch `integration`). Conflitos resolvidos: `list_free` (#1430 × #1939), `runtime.sh` (#1923 × #1940/#1946), `Makefile` (#1890). Corrigido também: gitlink órfão `third-party/RetroArch` e falta de `libsqlite3-dev` no CI de testes.
+- **Fase 2 em andamento:** corrigidos #781 (SSID oculto), #1684 (Blue Light ligando sozinho) e #1222 (`pressMenu2Kill` com SIGTERM).
+- **Verificado:** `make build` completo no toolchain (EXIT 0), 26/26 testes bats e 9/9 testes gtest.
+- **Rastreamento:** cada item abaixo virou issue no fork (#2–#60), com labels `P0`–`P3` e `needs-device` quando o item só pode ser reproduzido no aparelho.
+
 ## Onde o upstream parou
 
 - **Estável:** v4.3.1-1, de 24/06/2024. É a última release "Latest".
