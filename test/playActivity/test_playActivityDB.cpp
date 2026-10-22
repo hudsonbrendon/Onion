@@ -11,6 +11,7 @@ extern "C" {
 #include "utils/log.h"
 
 #define PLAY_ACTIVITY_DB_NEW_FILE "/tmp/onion-play-activity-test.sqlite"
+#define PLAY_ACTIVITY_STATES_DIR "/tmp/onion-play-activity-states"
 #include "../../src/playActivity/playActivityDB.h"
 }
 
@@ -112,6 +113,29 @@ TEST(PlayActivityDB, ImagePathFallsBackToCachedImage)
 
     get_rom_image_path("", NULL, out);
     EXPECT_STREQ(out, "");
+
+    system(("rm -rf " + root).c_str());
+}
+
+// Without box art, the auto save state thumbnail of any core is used (#47).
+TEST(PlayActivityDB, ImagePathFallsBackToStateThumbnail)
+{
+    std::string root = PLAY_ACTIVITY_STATES_DIR;
+    system(("rm -rf " + root).c_str());
+    mkdir(root.c_str(), 0777);
+    mkdir((root + "/gpSP").c_str(), 0777);
+    mkdir((root + "/mGBA").c_str(), 0777);
+    std::string thumb = root + "/mGBA/Foo.state.auto.png";
+    fclose(fopen(thumb.c_str(), "w"));
+
+    char out[STR_MAX];
+
+    get_rom_image_path("GBA/Foo.gba", NULL, out);
+    EXPECT_EQ(std::string(out), thumb);
+
+    // No thumbnail: keep the (missing) Imgs path as before.
+    get_rom_image_path("GBA/Bar.gba", NULL, out);
+    EXPECT_STREQ(out, "/mnt/SDCARD/Roms/GBA/Imgs/Bar.png");
 
     system(("rm -rf " + root).c_str());
 }

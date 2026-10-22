@@ -33,15 +33,6 @@ typedef enum {
 
 RomScreenType_e findRomScreen(const Game_s *game, char *currPicture)
 {
-    // Check if save state image exists
-    // if (strlen(game->core_name) != 0) {
-    //     sprintf(currPicture, STATES_DIR "/%s/%s.state.auto.png", game->core_name, game->rom_name);
-    //     printf_debug("Checking for save state image: %s\n", currPicture);
-    //     if (exists(currPicture)) {
-    //         return ROM_SCREEN_STATE;
-    //     }
-    // }
-
     // Check if hashed rom screen exists
     uint32_t hash = FNV1A_Pippip_Yurii(game->recentItem.rompath, strlen(game->recentItem.rompath));
     sprintf(currPicture, ROM_SCREENS_DIR "/%" PRIu32 ".png", hash);
@@ -55,6 +46,15 @@ RomScreenType_e findRomScreen(const Game_s *game, char *currPicture)
     printf_debug("Checking for artwork: %s\n", currPicture);
     if (exists(currPicture)) {
         return ROM_SCREEN_ARTWORK;
+    }
+
+    // No box art: fall back to the auto save state thumbnail (#47)
+    if (strlen(game->core_name) != 0) {
+        sprintf(currPicture, STATES_DIR "/%s/%s.state.auto.png", game->core_name, game->rom_name);
+        printf_debug("Checking for save state image: %s\n", currPicture);
+        if (exists(currPicture)) {
+            return ROM_SCREEN_STATE;
+        }
     }
 
     return ROM_SCREEN_NONE;

@@ -20,6 +20,9 @@
 #define PLAY_ACTIVITY_DB_NEW_FILE "/mnt/SDCARD/Saves/CurrentProfile/play_activity/play_activity_db.sqlite"
 #endif
 #define ROMS_FOLDER "/mnt/SDCARD/Roms"
+#ifndef PLAY_ACTIVITY_STATES_DIR
+#define PLAY_ACTIVITY_STATES_DIR "/mnt/SDCARD/Saves/CurrentProfile/states"
+#endif
 #define CMD_TO_RUN "/mnt/SDCARD/.tmp_update/cmd_to_run.sh"
 #define ROM_NOT_FOUND -1
 
@@ -50,9 +53,33 @@ struct PlayActivities {
 
 sqlite3 *play_activity_db = NULL;
 
+// Find the auto save state thumbnail (states/<core>/<rom>.state.auto.png).
+// The core is unknown here, so every core folder is checked.
+// Only runs for roms without box art: one directory scan each.
+bool get_rom_state_thumbnail_path(const char *rom_file, char *out_image_path)
+{
+    DIR *dir = opendir(PLAY_ACTIVITY_STATES_DIR);
+    if (dir == NULL)
+        return false;
+
+    char *clean_rom_name = file_removeExtension(file_basename(rom_file));
+    struct dirent *ent;
+    bool found = false;
+    while (!found && (ent = readdir(dir)) != NULL) {
+        if (ent->d_name[0] == '.')
+            continue;
+        snprintf(out_image_path, STR_MAX - 1, PLAY_ACTIVITY_STATES_DIR "/%s/%s.state.auto.png", ent->d_name, clean_rom_name);
+        found = is_file(out_image_path);
+    }
+    free(clean_rom_name);
+    closedir(dir);
+    return found;
+}
+
 // Box art is resolved at read time so a cover scraped after the game was
 // first played shows up. Prefer the scraper location (Roms/<system>/Imgs),
-// then the cache imgpath stored on the last launch (custom imgpath configs).
+// then the cache imgpath stored on the last launch (custom imgpath configs),
+// then the auto save state thumbnail when the game has no box art (#47).
 void get_rom_image_path(const char *rom_file, const char *db_image_path, char *out_image_path)
 {
     out_image_path[0] = '\0';
@@ -71,8 +98,14 @@ void get_rom_image_path(const char *rom_file, const char *db_image_path, char *o
             return;
     }
 
-    if (db_image_path != NULL && is_file(db_image_path))
+    if (db_image_path != NULL && is_file(db_image_path)) {
         snprintf(out_image_path, STR_MAX - 1, "%s", db_image_path);
+        return;
+    }
+
+    char state_image_path[STR_MAX];
+    if (rom_file[0] != '\0' && get_rom_state_thumbnail_path(rom_file, state_image_path))
+        strcpy(out_image_path, state_image_path);
 }
 
 void play_activity_db_close()
