@@ -313,9 +313,9 @@ int __db_insert_rom(const char *rom_type, const char *rom_name, const char *file
     return rom_id;
 }
 
-int __db_insert_rom_from_cache(CacheDBItem *cache_db_item)
+int __db_insert_rom_from_cache(CacheDBItem *cache_db_item, const char *file_path)
 {
-    return __db_insert_rom(cache_db_item->cache_path, cache_db_item->name, cache_db_item->path, cache_db_item->imgpath);
+    return __db_insert_rom(cache_db_item->cache_path, cache_db_item->name, file_path, cache_db_item->imgpath);
 }
 
 void __db_update_rom(int rom_id, const char *rom_type, const char *rom_name, const char *file_path, const char *image_path)
@@ -329,9 +329,9 @@ void __db_update_rom(int rom_id, const char *rom_type, const char *rom_name, con
     sqlite3_free(sql);
 }
 
-void __db_update_rom_from_cache(int rom_id, CacheDBItem *cache_db_item)
+void __db_update_rom_from_cache(int rom_id, CacheDBItem *cache_db_item, const char *file_path)
 {
-    __db_update_rom(rom_id, cache_db_item->cache_path, cache_db_item->name, cache_db_item->path, cache_db_item->imgpath);
+    __db_update_rom(rom_id, cache_db_item->cache_path, cache_db_item->name, file_path, cache_db_item->imgpath);
 }
 
 int __db_get_orphan_rom_id(const char *rom_path)
@@ -392,7 +392,7 @@ int __db_rom_find_by_file_path(const char *rom_path, bool create_or_update)
     else if (create_or_update) {
         CacheDBItem *cache_db_item = cache_db_find(rom_path);
         if (cache_db_item != NULL) {
-            __db_update_rom_from_cache(rom_id, cache_db_item);
+            __db_update_rom_from_cache(rom_id, cache_db_item, rom_path);
             free(cache_db_item);
         }
     }
@@ -401,7 +401,7 @@ int __db_rom_find_by_file_path(const char *rom_path, bool create_or_update)
         CacheDBItem *cache_db_item = cache_db_find(rom_path);
 
         if (cache_db_item != NULL) {
-            __db_update_rom_from_cache(rom_id, cache_db_item);
+            __db_update_rom_from_cache(rom_id, cache_db_item, rom_path);
             free(cache_db_item);
         }
         else {
@@ -414,7 +414,7 @@ int __db_rom_find_by_file_path(const char *rom_path, bool create_or_update)
         CacheDBItem *cache_db_item = cache_db_find(rom_path);
 
         if (cache_db_item != NULL) {
-            rom_id = __db_insert_rom_from_cache(cache_db_item);
+            rom_id = __db_insert_rom_from_cache(cache_db_item, rom_path);
             free(cache_db_item);
         }
         else {

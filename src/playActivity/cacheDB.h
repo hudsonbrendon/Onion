@@ -124,10 +124,10 @@ CacheDBItem *cache_db_find(const char *path_or_name)
     free(_path_or_name);
 
     if (cache_version == 2) {
-        sql = sqlite3_mprintf("SELECT disp, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q LIMIT 1;", cache_type, rel_path, game_name);
+        sql = sqlite3_mprintf("SELECT disp, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q ORDER BY path LIKE '%%%q' DESC LIMIT 1;", cache_type, rel_path, game_name, rel_path);
     }
     else if (cache_version == 6) {
-        sql = sqlite3_mprintf("SELECT pinyin, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q LIMIT 1;", cache_type, rel_path, game_name);
+        sql = sqlite3_mprintf("SELECT pinyin, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q ORDER BY path LIKE '%%%q' DESC LIMIT 1;", cache_type, rel_path, game_name, rel_path);
     }
     else {
         printf("No cache db found\n");
