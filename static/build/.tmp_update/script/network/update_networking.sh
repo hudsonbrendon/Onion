@@ -169,7 +169,7 @@ wifi_on() {
     ifconfig wlan0 up
     $sysdir/script/network/wpa_scan_ssid.sh
     $miyoodir/app/wpa_supplicant -B -D nl80211 -iwlan0 -c /appconfigs/wpa_supplicant.conf
-    udhcpc -i wlan0 -s /etc/init.d/udhcpc.script &
+    $netscript/set_ip.sh
     iw dev wlan0 set power_save off
 }
 
@@ -439,8 +439,7 @@ check_hotspotstate() {
             pkill -9 dnsmasq
             ifconfig wlan0 up
             ifconfig wlan1 down
-            killall -9 udhcpc
-            udhcpc -i wlan0 -s /etc/init.d/udhcpc.script &
+            $netscript/set_ip.sh
             check_wifi
         else
             return

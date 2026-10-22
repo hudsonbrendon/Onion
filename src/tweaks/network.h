@@ -2,6 +2,7 @@
 #define TWEAKS_NETWORK_H__
 
 #include <SDL/SDL_image.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "components/kbinput_wrapper.h"
 #include "components/list.h"
 #include "system/keymap_sw.h"
 #include "theme/render/dialog.h"
@@ -22,6 +24,7 @@
 #include "utils/process.h"
 
 #include "./appstate.h"
+#include "./info_dialog.h"
 
 #define NET_SCRIPT_PATH "/mnt/SDCARD/.tmp_update/script/network"
 #define SMBD_CONFIG_PATH "/mnt/SDCARD/.tmp_update/config/smb.conf"
@@ -45,6 +48,7 @@ static struct network_s {
     bool vncserv;
     bool loaded;
     bool force_wifi_on_startup;
+    bool static_ip;
     int vncfps;
 } network_state = {
     .vncfps = 20,
@@ -71,6 +75,7 @@ void network_loadState(void)
     network_state.check_updates = config_flag_get(".checkUpdates");
     network_state.keep_alive = config_flag_get(".keepServicesAlive");
     network_state.vncserv = config_flag_get(".vncServer");
+    network_state.static_ip = config_flag_get(".staticIp");
     config_get(".vncfps", CONFIG_INT, &network_state.vncfps);
     network_state.loaded = true;
 }
@@ -416,6 +421,59 @@ void network_setVNCFPS(void *pt)
     }
 }
 
+#define STATIC_IP_FIELDS_POS 4 // after IP label, Hotspot, WPS and the Static IP toggle
+#define STATIC_IP_NUM_FIELDS 4
+
+static const char *network_static_ip_keys[STATIC_IP_NUM_FIELDS] = {".staticIpAddr", ".staticIpMask", ".staticIpGw", ".staticIpDns"};
+static const char *network_static_ip_names[STATIC_IP_NUM_FIELDS] = {"IP address", "Netmask", "Gateway", "DNS"};
+
+void network_staticIpLabel(int field, char *out_label)
+{
+    char value[STR_MAX] = "";
+    if (!config_get(network_static_ip_keys[field], CONFIG_STR, value) || value[0] == '\0')
+        strcpy(value, "Not set");
+    snprintf(out_label, STR_MAX - 1, "%s: %.64s", network_static_ip_names[field], value);
+}
+
+void network_applyIp(void)
+{
+    if (settings.wifi_on && !network_state.hotspot)
+        system("sh " NET_SCRIPT_PATH "/set_ip.sh &");
+}
+
+void network_setStaticIpState(void *pt)
+{
+    network_setState(&network_state.static_ip, ".staticIp", ((ListItem *)pt)->value);
+    for (int i = 0; i < STATIC_IP_NUM_FIELDS; i++)
+        _menu_wifi.items[STATIC_IP_FIELDS_POS + i].disabled = !network_state.static_ip;
+    network_applyIp();
+    all_changed = true;
+}
+
+void network_editStaticIpField(void *pt)
+{
+    ListItem *item = (ListItem *)pt;
+    int field = item->action_id;
+    char value[STR_MAX] = "";
+    config_get(network_static_ip_keys[field], CONFIG_STR, value);
+
+    const char *result = launch_keyboard(value, network_static_ip_names[field]);
+    all_changed = true;
+    if (result == NULL)
+        return;
+
+    struct in_addr addr;
+    if (result[0] != '\0' && inet_pton(AF_INET, result, &addr) != 1) {
+        __showInfoDialog("Static IP", "Invalid address, use e.g. 192.168.1.50");
+        return;
+    }
+
+    strncpy(value, result, STR_MAX - 1);
+    config_setString(network_static_ip_keys[field], value);
+    network_staticIpLabel(field, item->label);
+    network_applyIp();
+}
+
 void menu_smbd(void *pt)
 {
     ListItem *item = (ListItem *)pt;
@@ -592,7 +650,7 @@ void menu_vnc(void *pt)
 void menu_wifi(void *_)
 {
     if (!_menu_wifi._created) {
-        _menu_wifi = list_create(3, LIST_SMALL);
+        _menu_wifi = list_create(STATIC_IP_FIELDS_POS + STATIC_IP_NUM_FIELDS, LIST_SMALL);
         strcpy(_menu_wifi.title, "WiFi");
         list_addItem(&_menu_wifi,
                      (ListItem){
@@ -623,6 +681,24 @@ void menu_wifi(void *_)
         //              (ListItem){
         //                  .label = "WPS...",
         //                  .action = menu_wps});
+        list_addItemWithInfoNote(&_menu_wifi,
+                                 (ListItem){
+                                     .label = "Static IP",
+                                     .item_type = TOGGLE,
+                                     .value = (int)network_state.static_ip,
+                                     .action = network_setStaticIpState},
+                                 "Use a fixed IP address instead of DHCP.\n"
+                                 "Set the address, netmask, gateway and\n"
+                                 "DNS below. Netmask defaults to\n"
+                                 "255.255.255.0 and DNS to the gateway.");
+        for (int i = 0; i < STATIC_IP_NUM_FIELDS; i++) {
+            ListItem field_item = {
+                .disabled = !network_state.static_ip,
+                .action_id = i,
+                .action = network_editStaticIpField};
+            network_staticIpLabel(i, field_item.label);
+            list_addItem(&_menu_wifi, field_item);
+        }
     }
     strcpy(_menu_wifi.items[0].label, ip_address_label);
     menu_stack[++menu_level] = &_menu_wifi;
@@ -644,7 +720,7 @@ void menu_network(void *_)
                          .action = NULL});
         list_addItem(&_menu_network,
                      (ListItem){
-                         .label = "WiFi: Hotspot/WPS...",
+                         .label = "WiFi: Hotspot/WPS/Static IP...",
                          .action = menu_wifi});
         list_addItemWithInfoNote(&_menu_network,
                                  (ListItem){
