@@ -173,15 +173,20 @@ download_update() {
 	clear
 	if [ "$Mychoice" = "Yes" ]; then
 
-		echo -ne "\n${BLUE}================== CHECKDISK ==================${NC}\n"
-		/mnt/SDCARD/.tmp_update/script/stop_audioserver.sh > nul 2> nul # we need a maximum of memory available to run fsck.fat
-		/mnt/SDCARD/.tmp_update/bin/freemma > NUL
-		echo -ne "\n" \
-			"Please wait during FAT file system integrity check.\n" \
-			"Issues should be fixed automatically.\n" \
-			"The process can be long:\n" \
-			"about 2 minutes for 128GB SD card\n\n\n"
-		fsck.fat -a $mount_point
+		# Full fsck is slow on big cards and memory hungry: make it optional
+		fsck_choice=$(echo -e "Yes\nNo" | $sysdir/script/shellect.sh -t "Check SD card before update?" -b "Recommended, but can take ~2 min on 128GB.")
+		clear
+		if [ "$fsck_choice" = "Yes" ]; then
+			echo -ne "\n${BLUE}================== CHECKDISK ==================${NC}\n"
+			/mnt/SDCARD/.tmp_update/script/stop_audioserver.sh > nul 2> nul # we need a maximum of memory available to run fsck.fat
+			/mnt/SDCARD/.tmp_update/bin/freemma > NUL
+			echo -ne "\n" \
+				"Please wait during FAT file system integrity check.\n" \
+				"Issues should be fixed automatically.\n" \
+				"The process can be long:\n" \
+				"about 2 minutes for 128GB SD card\n\n\n"
+			fsck.fat -a $mount_point
+		fi
 
 		mkdir -p $sysdir/download/
 		echo -ne "\n\n" \
