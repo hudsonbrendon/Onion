@@ -36,7 +36,19 @@ Screen Time applies to game launches handled by Onion's runtime. It does not lim
 
 Someone with physical SD-card access or shell access can still remove or change Screen Time settings. Treat that level of access as administrator access.
 
+Screen Time limits **how long** games can be played, not **what** can be opened. A child can still open Apps, the RetroArch menu, and other system tools. Keep these gaps in mind:
+
+- **Guest Mode resets the counter.** Today's usage is read from the current profile's Activity Tracker data, so switching profile with [Guest Mode](./guest-mode) counts only that profile's own usage. The daily limit and PIN are shared by both profiles.
+- **Changing the date or time resets the counter.** Usage is counted for the current local day, so moving the clock forward (for example with the [Clock](./clock) app) starts a new day.
+
+For a stricter setup, remove the Guest Mode and Clock apps with the [Package Manager](./package-manager).
+
+## Parental controls in Onion
+
+Screen Time is the parental control mechanism included in this Onion fork. The upstream Kids Mode app proposal ([OnionUI/Onion#1910](https://github.com/OnionUI/Onion/pull/1910)), which locks the device into a restricted setup behind a PIN, overlaps with it and is not included.
+
 ## Related
 
 - [Tweaks](./tweaks)
 - [Activity Tracker](./activity-tracker)
+- [Guest Mode](./guest-mode)
