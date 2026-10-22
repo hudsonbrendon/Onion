@@ -214,6 +214,13 @@ apply_update() {
 	Mychoice=$(echo -e "No\nYes" | $sysdir/script/shellect.sh -t "Apply update $Release_Version ?" -b "Press A to validate your choice.")
 	clear
 	if [ "$Mychoice" = "Yes" ]; then
+		while ! $sysdir/script/battery_ok.sh 50; do
+			echo -ne "\n${RED}Battery too low to update safely.${NC}\n" \
+				"Plug in the charger (or charge above 50%).\n"
+			Mychoice=$(echo -e "Retry\nCancel" | $sysdir/script/shellect.sh -t "Charger needed to apply update" -b "Press A to validate your choice.")
+			clear
+			[ "$Mychoice" = "Retry" ] || exit 8
+		done
 		echo "Applying update... "
 
 		umount /mnt/SDCARD/miyoo/app/MainUI 2> /dev/null
