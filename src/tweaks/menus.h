@@ -37,6 +37,8 @@ void menu_systemStartup(void *_)
                                      .label = "Auto-resume last game",
                                      .item_type = TOGGLE,
                                      .value = (int)settings.startup_auto_resume,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.startup_auto_resume,
                                      .action = action_setStartupAutoResume},
                                  "Auto-resume happens when you shutdown\n"
                                  "the device while a game is running.\n"
@@ -49,6 +51,8 @@ void menu_systemStartup(void *_)
                                      .value_max = 3,
                                      .value_labels = {"MainUI", "GameSwitcher", "RetroArch", "AdvanceMENU"},
                                      .value = settings.startup_application,
+                                     .has_default = true,
+                                     .default_value = __default_settings.startup_application,
                                      .action = action_setStartupApplication},
                                  "With this option you can choose which\n"
                                  "frontend you want to launch into on\n"
@@ -60,6 +64,8 @@ void menu_systemStartup(void *_)
                                      .value_max = 5,
                                      .value_formatter = formatter_startupTab,
                                      .value = settings.startup_tab,
+                                     .has_default = true,
+                                     .default_value = __default_settings.startup_tab,
                                      .action = action_setStartupTab},
                                  "Here you can set which tab you want\n"
                                  "MainUI to launch into.");
@@ -169,6 +175,8 @@ void menu_datetime(void *_)
                                      .value_max = 24,
                                      .value_formatter = formatter_timeSkip,
                                      .value = settings.time_skip,
+                                     .has_default = true,
+                                     .default_value = __default_settings.time_skip,
                                      .action = action_setTimeSkip},
                                  "Without RTC the system time stands still\n"
                                  "while the device is off.\n"
@@ -207,6 +215,8 @@ void menu_system(void *_)
                                      .value_max = 5,
                                      .value_formatter = formatter_battWarn,
                                      .value = settings.low_battery_warn_at / 5,
+                                     .has_default = true,
+                                     .default_value = __default_settings.low_battery_warn_at / 5,
                                      .action = action_setLowBatteryWarnAt},
                                  "Show a red battery icon warning in the\n"
                                  "top right corner, when battery is at or\n"
@@ -218,6 +228,8 @@ void menu_system(void *_)
                                      .value_max = 5,
                                      .value_formatter = formatter_battExit,
                                      .value = settings.low_battery_autosave_at,
+                                     .has_default = true,
+                                     .default_value = __default_settings.low_battery_autosave_at,
                                      .action = action_setLowBatteryAutoSave},
                                  "Set the battery percentage at which the\n"
                                  "system should save and exit RetroArch.");
@@ -230,6 +242,8 @@ void menu_system(void *_)
                                          .value_max = 2,
                                          .value_labels = {"Suspend", "Shutdown", "Nothing"},
                                          .value = settings.lid_close_action,
+                                         .has_default = true,
+                                         .default_value = __default_settings.lid_close_action,
                                          .action = action_setLidCloseAction},
                                      "Choose what happens when \n"
                                      "you close the lid.");
@@ -241,6 +255,8 @@ void menu_system(void *_)
                                      .value_max = 3,
                                      .value_labels = {"Off", "Low", "Normal", "High"},
                                      .value = settings.vibration,
+                                     .has_default = true,
+                                     .default_value = __default_settings.vibration,
                                      .action = action_setVibration},
                                  "Set the vibration strength for haptic\n"
                                  "feedback, when pressing system shortcuts.");
@@ -261,6 +277,8 @@ void menu_buttonActionMainUIMenu(void *_)
                                      .value_max = 2,
                                      .value_labels = BUTTON_MAINUI_LABELS,
                                      .value = settings.mainui_single_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.mainui_single_press,
                                      .action_id = 0,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for single pressing\n"
@@ -272,6 +290,8 @@ void menu_buttonActionMainUIMenu(void *_)
                                      .value_max = 2,
                                      .value_labels = BUTTON_MAINUI_LABELS,
                                      .value = settings.mainui_long_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.mainui_long_press,
                                      .action_id = 1,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for long pressing\n"
@@ -283,6 +303,8 @@ void menu_buttonActionMainUIMenu(void *_)
                                      .value_max = 2,
                                      .value_labels = BUTTON_MAINUI_LABELS,
                                      .value = settings.mainui_double_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.mainui_double_press,
                                      .action_id = 2,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for double pressing\n"
@@ -303,6 +325,8 @@ void menu_buttonActionInGameMenu(void *_)
                                      .value_max = 4,
                                      .value_labels = BUTTON_INGAME_LABELS,
                                      .value = settings.ingame_single_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.ingame_single_press,
                                      .action_id = 3,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for single pressing\n"
@@ -314,6 +338,8 @@ void menu_buttonActionInGameMenu(void *_)
                                      .value_max = 4,
                                      .value_labels = BUTTON_INGAME_LABELS,
                                      .value = settings.ingame_long_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.ingame_long_press,
                                      .action_id = 4,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for long pressing\n"
@@ -325,6 +351,8 @@ void menu_buttonActionInGameMenu(void *_)
                                      .value_max = 4,
                                      .value_labels = BUTTON_INGAME_LABELS,
                                      .value = settings.ingame_double_press,
+                                     .has_default = true,
+                                     .default_value = __default_settings.ingame_double_press,
                                      .action_id = 5,
                                      .action = action_setMenuButtonKeymap},
                                  "Set the action for double pressing\n"
@@ -343,6 +371,8 @@ void menu_buttonAction(void *_)
                                      .label = "Menu single press vibration",
                                      .item_type = TOGGLE,
                                      .value = (int)settings.menu_button_haptics,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.menu_button_haptics,
                                      .action = action_setMenuButtonHaptics},
                                  "Enable haptic feedback for menu button\n"
                                  "single and double press.");
@@ -383,6 +413,8 @@ void menu_buttonAction(void *_)
                                      .value_max = 1,
                                      .value_labels = {"Standby", "Shutdown"},
                                      .value = (int)settings.disable_standby,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.disable_standby,
                                      .action = action_setDisableStandby},
                                  "Change the power button single press\n"
                                  "action to either 'standby' or 'shutdown'.");
@@ -470,6 +502,8 @@ void menu_themeOverrides(void *_)
                                      .label = "Mute background music",
                                      .item_type = TOGGLE,
                                      .value = settings.bgm_mute,
+                                     .has_default = true,
+                                     .default_value = __default_settings.bgm_mute,
                                      .action = action_toggleBackgroundMusic},
                                  "Mute background music for themes");
         list_addItemWithInfoNote(&_menu_theme_overrides,
@@ -537,6 +571,8 @@ void menu_blueLight(void *_)
                                          .disabled = schedule_disable,
                                          .item_type = TOGGLE,
                                          .value = (int)settings.blue_light_schedule,
+                                         .has_default = true,
+                                         .default_value = (int)__default_settings.blue_light_schedule,
                                          .action = action_blueLightSchedule},
                                      "Enable or disable the bluelight filter schedule\n");
         }
@@ -596,6 +632,8 @@ void menu_userInterface(void *_)
                                      .label = "Show recents",
                                      .item_type = TOGGLE,
                                      .value = settings.show_recents,
+                                     .has_default = true,
+                                     .default_value = __default_settings.show_recents,
                                      .action = action_setShowRecents},
                                  "Toggle the visibility of the recents tab\n"
                                  "in the main menu.");
@@ -604,6 +642,8 @@ void menu_userInterface(void *_)
                                      .label = "Show expert mode",
                                      .item_type = TOGGLE,
                                      .value = settings.show_expert,
+                                     .has_default = true,
+                                     .default_value = __default_settings.show_expert,
                                      .action = action_setShowExpert},
                                  "Toggle the visibility of the expert tab\n"
                                  "in the main menu.");
@@ -689,6 +729,8 @@ void menu_diagnostics(void *pt)
                                      .sticky_note = "Enable global logging",
                                      .item_type = TOGGLE,
                                      .value = (int)settings.enable_logging,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.enable_logging,
                                      .action = action_setEnableLogging},
                                  "Enable global logging, \n"
                                  "for system & networking. \n \n"
@@ -821,6 +863,8 @@ void menu_screen_recorder(void *pt)
                                      .item_type = MULTIVALUE,
                                      .value_max = 10,
                                      .value = (int)settings.rec_countdown,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.rec_countdown,
                                      .action = action_toggleScreenRecCountdown},
                                  "Countdown when starting recording. \n\n"
                                  "The screen will pulse white n times \n"
@@ -831,6 +875,8 @@ void menu_screen_recorder(void *pt)
                                      .sticky_note = "Turn the indicator on/off",
                                      .item_type = TOGGLE,
                                      .value = (int)settings.rec_indicator,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.rec_indicator,
                                      .action = action_toggleScreenRecIndicator},
                                  "Toggles the display of a\n"
                                  "a flashing icon to remind you\n"
@@ -841,6 +887,8 @@ void menu_screen_recorder(void *pt)
                                      .sticky_note = "Turn the hotkey (Menu+A) on/off ",
                                      .item_type = TOGGLE,
                                      .value = (int)settings.rec_hotkey,
+                                     .has_default = true,
+                                     .default_value = (int)__default_settings.rec_hotkey,
                                      .action = action_toggleScreenRecHotkey},
                                  "Enable the hotkey function.\n\n"
                                  "Recording can be started/stopped\n"

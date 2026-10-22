@@ -130,6 +130,9 @@ int main(int argc, char *argv[])
             else if (keystate[SW_BTN_Y] == PRESSED) {
                 key_changed = list_resetCurrentItem(menu_stack[menu_level]);
             }
+            else if (keystate[SW_BTN_START] == PRESSED) {
+                key_changed = list_defaultCurrentItem(menu_stack[menu_level]);
+            }
             else if (keystate[SW_BTN_SELECT] == PRESSED) {
                 if (list_hasInfoNote(menu_stack[menu_level])) {
                     sound_change();

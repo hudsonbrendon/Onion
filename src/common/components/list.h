@@ -42,6 +42,8 @@ typedef struct ListItem {
     void (*arrow_action)(void *self);
     int action_id;
     int _reset_value;
+    bool has_default; // set with default_value to enable START reset
+    int default_value;
     void *icon_ptr;
     void *preview_ptr;
     char preview_path[4096];
@@ -446,6 +448,21 @@ bool list_resetCurrentItem(List *list)
         return false;
 
     item->value = item->_reset_value;
+
+    if (item->action != NULL)
+        item->action((void *)item);
+
+    return true;
+}
+
+bool list_defaultCurrentItem(List *list)
+{
+    ListItem *item = list_currentItem(list);
+
+    if (item == NULL || !item->has_default || item->value == item->default_value)
+        return false;
+
+    item->value = item->default_value;
 
     if (item->action != NULL)
         item->action((void *)item);
