@@ -28,7 +28,7 @@ You can either use the master toggle to turn the VNC Server on with your right/l
 ## Logging in
 
 
-Then from your computer, you can login with any VNC client. [RealVNC](https://www.realvnc.com/fr/connect/download/viewer/) for example is declined on all platforms. UltraVNC is a Windows alternative.
+Then from your computer, you can login with any VNC client. [RealVNC](https://www.realvnc.com/en/connect/download/viewer/) for example is declined on all platforms. UltraVNC is a Windows alternative.
 You'll need the IP of the device, found below (**Tweaks** › **Network**)
 
 ![](https://github.com/OnionUI/Onion/assets/47260768/23ee6dbf-48c8-4484-b98b-9a8642b8fd49)

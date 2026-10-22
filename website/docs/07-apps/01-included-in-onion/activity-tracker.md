@@ -27,6 +27,8 @@ For each game you'll see:
 - `AVG`: average session time on this game
 - `PLAY`: number of times you have launched the game
 
+The game image is the box art from the `Imgs` folder. When there is none, the thumbnail of the game's auto save state is used instead.
+
 ### Controls
 
 | Button          | Function                                 |
