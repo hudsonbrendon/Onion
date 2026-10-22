@@ -272,6 +272,7 @@ void activate_drastic_action(int action_id)
 {
     switch (action_id) {
     case 1:
+    case 4: // "Quick menu" is RetroArch-only, fall back to GameSwitcher
         action_drastic_gameSwitcher();
         break;
     case 2:
