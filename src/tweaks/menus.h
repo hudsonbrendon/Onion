@@ -365,7 +365,7 @@ void menu_buttonActionInGameMenu(void *_)
 void menu_buttonAction(void *_)
 {
     if (!_menu_button_action._created) {
-        _menu_button_action = list_createWithTitle(6, LIST_SMALL, "Button shortcuts");
+        _menu_button_action = list_createWithTitle(8, LIST_SMALL, "Button shortcuts");
         list_addItemWithInfoNote(&_menu_button_action,
                                  (ListItem){
                                      .label = "Menu single press vibration",
@@ -418,6 +418,24 @@ void menu_buttonAction(void *_)
                                      .action = action_setDisableStandby},
                                  "Change the power button single press\n"
                                  "action to either 'standby' or 'shutdown'.");
+        list_addItemWithInfoNote(&_menu_button_action,
+                                 (ListItem){
+                                     .label = "Audio boost (START+L2/R2)",
+                                     .item_type = TOGGLE,
+                                     .value = !config_flag_get(".noAudioBoostHotkey"),
+                                     .action = action_setAudioBoostHotkey},
+                                 "Enable the global hotkeys for audio\n"
+                                 "boost. Turn off to free the combo\n"
+                                 "for games.");
+        list_addItemWithInfoNote(&_menu_button_action,
+                                 (ListItem){
+                                     .label = "Blue light (hold MENU+B)",
+                                     .item_type = TOGGLE,
+                                     .value = !config_flag_get(".noBlueLightHotkey"),
+                                     .action = action_setBlueLightHotkey},
+                                 "Enable the global hotkey for toggling\n"
+                                 "the blue light filter. Turn off to\n"
+                                 "free the combo for games.");
     }
     menu_stack[++menu_level] = &_menu_button_action;
     header_changed = true;

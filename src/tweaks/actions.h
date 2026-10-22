@@ -392,6 +392,16 @@ void action_setCpuClockHotkey(void *pt)
     config_flag_set(".cpuClockHotkey", ((ListItem *)pt)->value);
 }
 
+void action_setAudioBoostHotkey(void *pt)
+{
+    config_flag_set(".noAudioBoostHotkey", !((ListItem *)pt)->value);
+}
+
+void action_setBlueLightHotkey(void *pt)
+{
+    config_flag_set(".noBlueLightHotkey", !((ListItem *)pt)->value);
+}
+
 void action_setAltBrightness(void *pt)
 {
     config_flag_set(".altBrightness", ((ListItem *)pt)->value);
