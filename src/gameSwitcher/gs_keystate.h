@@ -324,6 +324,16 @@ void handleUpdateKeystatePopMenu(AppState *state)
             keystate[SW_BTN_X] = RELEASED;
         }
     }
+    else if (item != NULL && item->action_id == POP_MENU_ACTION_CPUCLOCK) {
+        if (keystate[SW_BTN_LEFT] == PRESSED) {
+            popMenu_adjustCpuClock(item, -CPUCLOCK_STEP);
+            state->changed = true;
+        }
+        else if (keystate[SW_BTN_RIGHT] == PRESSED) {
+            popMenu_adjustCpuClock(item, CPUCLOCK_STEP);
+            state->changed = true;
+        }
+    }
 }
 
 void handleKeystate(AppState *state)
