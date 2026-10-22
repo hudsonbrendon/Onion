@@ -6,16 +6,33 @@ export PATH="$sysdir/bin:$PATH"
 
 logfile=$(basename "$0" .sh)
 . $sysdir/script/log.sh
+. $sysdir/script/handle_zip_roms.sh
 
 MODEL_MM=283
+MODEL_MMF=285
 MODEL_MMP=354
 screen_resolution="640x480"
 
+romwinidx_device="/appconfigs/romwinidx.json"
+romwinidx_sd="$sysdir/config/romwinidx.json"
+romwinidx_dirty="$sysdir/config/.romwinidx_dirty"
+
 main() {
-    # Set model ID
-    axp 0 > /dev/null
-    export DEVICE_ID=$([ $? -eq 0 ] && echo $MODEL_MMP || echo $MODEL_MM)
+    # Set model ID based on hardware detection
+    if [ -e /sys/devices/soc0/soc/soc:hall-mh248/hallvalue ] || [ -e /dev/input/event1 ]; then
+        export DEVICE_ID=$MODEL_MMF
+    elif axp 0 > /dev/null 2>&1; then
+        export DEVICE_ID=$MODEL_MMP
+    else
+        export DEVICE_ID=$MODEL_MM
+    fi
     echo -n "$DEVICE_ID" > /tmp/deviceModel
+
+    # HW capability flags
+    HAS_AXP=0
+    if [ $DEVICE_ID -eq $MODEL_MMF ] || [ $DEVICE_ID -eq $MODEL_MMP ]; then
+        HAS_AXP=1
+    fi
 
     SERIAL_NUMBER=$(read_uuid)
     echo -n "$SERIAL_NUMBER" > /tmp/deviceSN
@@ -25,6 +42,7 @@ main() {
     clear_logs
 
     init_system
+    restore_romwinidx
     update_time
 
     # Remount passwd/group to add our own users
@@ -34,18 +52,28 @@ main() {
     # Start the battery monitor
     batmon &
 
-    # Reapply theme
+    # Reapply theme when this SD is first used on a device.
     system_theme="$(/customer/app/jsonval theme)"
-    active_theme="$(cat $sysdir/config/active_theme)"
+    active_theme="$(cat "$sysdir/config/active_theme" 2>/dev/null)"
+    theme_device_state="$sysdir/config/theme-applied-$SERIAL_NUMBER"
+    applied_theme="$(cat "$theme_device_state" 2>/dev/null)"
 
-    if [ "$system_theme" == "./" ] || [ "$system_theme" != "$active_theme" ] || [ ! -d "$system_theme" ]; then
+    if [ "$system_theme" == "./" ] ||
+        [ "$system_theme" != "$active_theme" ] ||
+        [ ! -d "$system_theme" ] ||
+        [ "$applied_theme" != "$system_theme" ]; then
         themeSwitcher --reapply_icons
+
+        # Re-read: themeSwitcher writes the resolved theme back to settings,
+        # including when it falls back to a different one.
+        system_theme="$(/customer/app/jsonval theme)"
+        echo -n "$system_theme" > "$theme_device_state"
     fi
 
     # Check is charging
     if [ $DEVICE_ID -eq $MODEL_MM ]; then
         is_charging=$(cat /sys/devices/gpiochip0/gpio/gpio59/value)
-    elif [ $DEVICE_ID -eq $MODEL_MMP ]; then
+    elif [ $HAS_AXP -eq 1 ]; then
         axp_status="0x$(axp 0 | cut -d':' -f2)"
         is_charging=$([ $(($axp_status & 0x4)) -eq 4 ] && echo 1 || echo 0)
     fi
@@ -100,9 +128,11 @@ main() {
         rm -f "$sysdir/cmd_to_run.sh" 2> /dev/null
     fi
 
-    if [ $DEVICE_ID -eq $MODEL_MMP ] && [ -f /mnt/SDCARD/RetroArch/retroarch_miyoo354 ]; then
-        # Mount miyoo354 RA version
-        mount -o bind /mnt/SDCARD/RetroArch/retroarch_miyoo354 /mnt/SDCARD/RetroArch/retroarch
+    if [ $DEVICE_ID -eq $MODEL_MMF ] || [ $DEVICE_ID -eq $MODEL_MMP ]; then
+        if [ -f /mnt/SDCARD/RetroArch/retroarch_miyoo354 ]; then
+            # Mount miyoo354 RA version
+            mount -o bind /mnt/SDCARD/RetroArch/retroarch_miyoo354 /mnt/SDCARD/RetroArch/retroarch
+        fi
     fi
 
     # Bind arcade name library to customer path
@@ -218,6 +248,34 @@ launch_main_ui() {
 
     mute_theme_bgm
 
+    # Prepare MainUI's three-page 640x480 layout before SDL starts.
+    if [ -x "$sysdir/bin/fbmode" ] && [ -f /tmp/new_res_available ]; then
+        # Skip when already correct: arriving from init_system, or from a
+        # previous MainUI launch, there is nothing to do, and skipping avoids
+        # clearing whatever is on screen. Any real change preclears, so the
+        # pitch never changes with stale pixels still in memory.
+        # --probe: WxH virtual WxH bpp N line_length N pages N
+        probe=$($sysdir/bin/fbmode --probe 2> /dev/null)
+        current_res=$(echo "$probe" | awk '{print $1}')
+        current_virtual=$(echo "$probe" | awk '{print $3}')
+        current_bpp=$(echo "$probe" | awk '{print $5}')
+        current_pages=$(echo "$probe" | awk '{print $NF}')
+
+        if [ "$current_res" = "640x480" ] &&
+           [ "$current_virtual" = "640x1440" ] &&
+           [ "$current_bpp" = "32" ] &&
+           [ "$current_pages" = "3" ]; then
+            log "Framebuffer already 640x480/3, preserving"
+        else
+            if ! $sysdir/bin/fbmode 640x480 --pages 3 --preclear --no-clear \
+                --linger 150 --timeout 500; then
+                log "fbmode failed before MainUI, falling back to fbset"
+                fbset -g 640 480 640 1440 32
+            fi
+            notify_resolution_change
+        fi
+    fi
+
     # MainUI launch
     cd $miyoodir/app
     PATH="$miyoodir/app:$PATH" \
@@ -279,6 +337,57 @@ check_is_game() {
     echo "$1" | grep -q "retroarch/cores" || echo "$1" | grep -q "/../../Roms/" || echo "$1" | grep -q "/mnt/SDCARD/Roms/"
 }
 
+screen_time_check_launch() {
+    rompath="$1"
+
+    if ! command -v screenTime > /dev/null 2>&1; then
+        log "screenTime not found, allowing launch"
+        return 0
+    fi
+
+    screen_time_output=$(screenTime check "$rompath" 2>&1)
+    screen_time_rc=$?
+    log "screenTime check: $screen_time_output"
+
+    # screenTime exits 2 only when policy explicitly blocks launch.
+    # Other non-zero statuses indicate an internal error and should not strand the user.
+    if [ $screen_time_rc -eq 2 ]; then
+        return 1
+    fi
+
+    return 0
+}
+
+screen_time_start_monitor() {
+    rompath="$1"
+    launcher_pid="$2"
+
+    screen_time_monitor_pid=""
+    rm -f /tmp/screen_time_limit_hit 2> /dev/null
+
+    if ! command -v screenTime > /dev/null 2>&1; then
+        return 0
+    fi
+
+    screenTime monitor "$rompath" "$launcher_pid" >> /tmp/screenTime.log 2>&1 &
+    screen_time_monitor_pid=$!
+    log "screenTime monitor started: $screen_time_monitor_pid"
+}
+
+screen_time_stop_monitor() {
+    if [ -n "$screen_time_monitor_pid" ]; then
+        kill "$screen_time_monitor_pid" 2> /dev/null
+        wait "$screen_time_monitor_pid" 2> /dev/null
+        log "screenTime monitor stopped: $screen_time_monitor_pid"
+        screen_time_monitor_pid=""
+    fi
+}
+
+notify_resolution_change() {
+    killall -SIGUSR1 batmon
+    killall -SIGUSR1 keymon
+}
+
 change_resolution() {
     res_x=""
     res_y=""
@@ -292,16 +401,34 @@ change_resolution() {
     fi
     log "Changing resolution to $res_x x $res_y"
 
-    bootScreen clear
+    if [ -x "$sysdir/bin/fbmode" ]; then
+        probe=$($sysdir/bin/fbmode --probe 2> /dev/null)
+        current_res=$(echo "$probe" | cut -d' ' -f1)
+        current_pages=$(echo "$probe" | awk '{print $NF}')
 
-    fbset -g "$res_x" "$res_y" "$res_x" "$((res_y * 2))" 32
-    # inform batmon and keymon of resolution change
-    killall -SIGUSR1 batmon
-    killall -SIGUSR1 keymon
+        # Keep game-side mode changes at the stock two-page layout.
+        if [ "$current_res" = "${res_x}x${res_y}" ] && [ "$current_pages" = "2" ]; then
+            notify_resolution_change
+            return
+        fi
+
+        if ! $sysdir/bin/fbmode "${res_x}x${res_y}" --pages 2 \
+            --preclear --linger 120 --timeout 500; then
+            log "fbmode failed, falling back to fbset"
+            bootScreen clear
+            fbset -g "$res_x" "$res_y" "$res_x" "$((res_y * 2))" 32
+        fi
+    else
+        bootScreen clear
+        fbset -g "$res_x" "$res_y" "$res_x" "$((res_y * 2))" 32
+    fi
+
+    notify_resolution_change
 }
 
 launch_game() {
     log "\n:: Launch game"
+    rm -f /tmp/.forceKillRetroarch
     cmd=$(cat $sysdir/cmd_to_run.sh)
     TZ_VALUE=$(cat "$sysdir/config/.tz")
 
@@ -315,11 +442,18 @@ launch_game() {
 
     start_audioserver
     save_settings
-
+    
     if check_is_game "$cmd"; then
         # Extract rom path
         rompath=$(echo "$cmd" | awk '{ st = index($0,"\" \""); print substr($0,st+3,length($0)-st-3)}')
+        romext=$(echo "$(basename "$rompath")" | awk -F. '{print tolower($NF)}')
 
+        if [ "$romext" == "zip" ] || [ "$romext" == "7z" ];then
+            handle_compressed_roms "$rompath"
+            rompath="$absolute_rom_path"
+        fi
+       
+        
         # Check for custom launch script
         if echo "$rompath" | grep -q ":"; then
             launch_script=$(echo "$rompath" | awk '{split($0,a,":"); print a[1]}')
@@ -327,8 +461,9 @@ launch_game() {
             echo "LD_PRELOAD=/mnt/SDCARD/miyoo/app/../lib/libpadsp.so \"$launch_script\" \"$rompath\"" > $sysdir/cmd_to_run.sh
         fi
 
-        orig_path="$rompath"
         romext=$(echo "$(basename "$rompath")" | awk -F. '{print tolower($NF)}')
+        
+        orig_path="$rompath"
 
         if [ "$romext" != "miyoocmd" ]; then
             # Resolve real path
@@ -351,6 +486,25 @@ launch_game() {
         fi
     fi
 
+    # Check before playActivity starts, so a blocked launch records no session.
+    if [ $is_game -eq 1 ]; then
+        if ! screen_time_check_launch "$rompath"; then
+            log "Screen time blocked launch: $rompath"
+            infoPanel --title "Screen time" --message "Daily screen time limit reached." --auto
+            rm -f /tmp/quick_switch 2> /dev/null
+            rm -f /tmp/force_auto_load_state 2> /dev/null
+            retval=0
+            return
+        fi
+    fi
+
+    play_activity_pid=""
+    services_kill_pid=""
+    if [ $is_game -eq 1 ]; then
+        playActivity start "$rompath" &
+        play_activity_pid=$!
+    fi
+
     full_resolution_path="$(get_full_resolution_path)"
 
     if [ -z "$launch_script" ]; then
@@ -369,16 +523,11 @@ launch_game() {
             echo "$temp" | sed 's/\$/\\\$/g' > $sysdir/cmd_to_run.sh
         fi
 
-        # Kill services for maximum performance
+        # Kill services while remaining launch preparation continues.
         if [ ! -f $sysdir/config/.keepServicesAlive ]; then
-            for process in dropbear bftpd filebrowser telnetd smbd; do
-                if is_running $process; then
-                    killall -9 $process
-                fi
-            done
+            killall -9 dropbear bftpd filebrowser telnetd smbd 2> /dev/null &
+            services_kill_pid=$!
         fi
-
-        playActivity start "$rompath"
     fi
 
     # Prevent quick switch loop
@@ -413,13 +562,60 @@ launch_game() {
             cd /mnt/SDCARD/RetroArch
             force_retroarch_cfg
 
-            # make the cmd_to_run shell env aware of the new timezone
-            TZ="$TZ_VALUE" $sysdir/cmd_to_run.sh
-            retval=$?
+            # Finish launch-side work before emulator handoff.
+            if [ -n "$services_kill_pid" ]; then
+                wait "$services_kill_pid" 2> /dev/null
+                services_kill_pid=""
+            fi
+            if [ -n "$play_activity_pid" ]; then
+                wait "$play_activity_pid"
+                play_activity_pid=""
+            fi
+
+            if [ $is_game -eq 1 ]; then
+                # make the cmd_to_run shell env aware of the new timezone
+                TZ="$TZ_VALUE" $sysdir/cmd_to_run.sh &
+                game_pid=$!
+                screen_time_start_monitor "$rompath" "$game_pid"
+                wait "$game_pid"
+                retval=$?
+                screen_time_stop_monitor
+            else
+                # make the cmd_to_run shell env aware of the new timezone
+                TZ="$TZ_VALUE" $sysdir/cmd_to_run.sh
+                retval=$?
+            fi
 
             if [ -f /tmp/new_res_available ]; then
-                # Restore resolution
-                change_resolution "640x480"
+                # infoPanel caches the old geometry and must not survive a mode change.
+                killall infoPanel 2>/dev/null
+                sleep 0.01
+                killall -9 infoPanel 2>/dev/null
+                rm -f /tmp/dismiss_info_panel
+
+                if [ -f /tmp/quick_switch ] || [ -f "$sysdir/.runGameSwitcher" ]; then
+                    # A handoff is pending. Whoever runs next owns the mode, so
+                    # leave the framebuffer alone rather than transitioning to
+                    # 640x480 only for the next step to transition away again.
+                    log "Handoff pending, preserving framebuffer"
+                elif [ -f /tmp/.offOrder ]; then
+                    # Shutting down. Nothing after this renders except the
+                    # shutdown screen, which reads the live geometry, and
+                    # keymon may already have one on screen from deepsleep.
+                    # Changing the mode underneath it shears whatever it is
+                    # still drawing.
+                    log "Shutdown pending, preserving framebuffer"
+                else
+                    if [ -x "$sysdir/bin/fbmode" ]; then
+                        if ! $sysdir/bin/fbmode 640x480 --pages 2 --preclear --no-clear \
+                            --linger 150 --timeout 500; then
+                            log "fbmode failed returning to MainUI, falling back to fbset"
+                            fbset -g 640 480 640 960 32
+                        fi
+                    fi
+
+                    change_resolution "640x480"
+                fi
             fi
 
             if [ $is_game -eq 1 ] && [ ! -f /tmp/.offOrder ] && [ -f /tmp/.displaySavingMessage ]; then
@@ -430,14 +626,28 @@ launch_game() {
             fi
         fi
     else
+        if [ -n "$services_kill_pid" ]; then
+            wait "$services_kill_pid" 2> /dev/null
+            services_kill_pid=""
+        fi
+        if [ -n "$play_activity_pid" ]; then
+            wait "$play_activity_pid"
+            play_activity_pid=""
+        fi
         retval=404
     fi
 
     log "cmd retval: $retval"
 
+    forced_retroarch_kill=0
+    if [ -f /tmp/.forceKillRetroarch ]; then
+        forced_retroarch_kill=1
+        rm -f /tmp/.forceKillRetroarch
+    fi
+
     if [ $retval -eq 404 ]; then
         infoPanel --title "File not found" --message "The requested file was not found." --auto
-    elif [ $retval -ge 128 ] && [ $retval -ne 143 ] && [ $retval -ne 255 ] && [ ! -f /tmp/.forceKillRetroarch ]; then
+    elif [ $retval -ge 128 ] && [ $retval -ne 143 ] && [ $retval -ne 255 ] && [ $forced_retroarch_kill -eq 0 ]; then
         infoPanel --title "Fatal error occurred" --message "The program exited unexpectedly.\n(Error code: $retval)" --auto
     fi
 
@@ -445,7 +655,11 @@ launch_game() {
 }
 
 force_retroarch_cfg() {
-    # Enable network commands in RetroArch
+    ra_cfg=/mnt/SDCARD/RetroArch/.retroarch/retroarch.cfg
+    if grep -q '^[[:space:]]*network_cmd_enable[[:space:]]*=[[:space:]]*"true"[[:space:]]*$' "$ra_cfg" 2> /dev/null; then
+        return
+    fi
+
     cat > /tmp/onion_ra_patch.cfg <<- EOM
 network_cmd_enable = "true"
 EOM
@@ -554,6 +768,7 @@ launch_game_postprocess() {
     # TIMER END + SHUTDOWN CHECK
     if [ $is_game -eq 1 ]; then
         cd $sysdir
+        screen_time_stop_monitor
         playActivity stop "$rompath"
 
         # Remove appended configs
@@ -637,6 +852,32 @@ check_switcher() {
 launch_switcher() {
     log "\n:: Launch switcher"
     cd $sysdir
+
+    # GameSwitcher owns its framebuffer requirement: a game exiting toward it
+    # leaves the mode alone, so this is the only place 752x560 is established.
+    if [ -f /tmp/new_res_available ] && [ -x "$sysdir/bin/fbmode" ]; then
+        # --probe: WxH virtual WxH bpp N line_length N pages N
+        probe=$($sysdir/bin/fbmode --probe 2> /dev/null)
+        current_res=$(echo "$probe" | awk '{print $1}')
+        current_virtual=$(echo "$probe" | awk '{print $3}')
+        current_bpp=$(echo "$probe" | awk '{print $5}')
+        current_pages=$(echo "$probe" | awk '{print $NF}')
+
+        if [ "$current_res" = "752x560" ] &&
+           [ "$current_virtual" = "752x1120" ] &&
+           [ "$current_bpp" = "32" ] &&
+           [ "$current_pages" = "2" ]; then
+            log "Framebuffer already 752x560/2, preserving"
+        else
+            if ! $sysdir/bin/fbmode 752x560 --pages 2 --preclear --no-clear \
+                --linger 150 --timeout 500; then
+                log "fbmode failed before GameSwitcher, falling back to fbset"
+                fbset -g 752 560 752 1120 32
+            fi
+            notify_resolution_change
+        fi
+    fi
+
     start_audioserver
     LD_PRELOAD="$miyoodir/lib/libpadsp.so" gameSwitcher
     rm $sysdir/.runGameSwitcher
@@ -644,9 +885,39 @@ launch_switcher() {
     sync
 }
 
+restore_romwinidx() {
+    # save_romwinidx only runs from check_off_order, so the marker surviving a
+    # boot means the last session never reached a clean shutdown and the device
+    # file holds positions the card copy never received. Restoring would throw
+    # them away, so leave both files alone and let the next clean shutdown
+    # publish whatever the device has.
+    if [ -f "$romwinidx_dirty" ]; then
+        log "romwinidx: unclean shutdown, keeping device file"
+    elif [ -f "$romwinidx_sd" ]; then
+        cp -f "$romwinidx_sd" "$romwinidx_device"
+        log "romwinidx: restored from SD"
+    else
+        rm -f "$romwinidx_device"
+    fi
+
+    touch "$romwinidx_dirty"
+}
+
+save_romwinidx() {
+    if [ -f "$romwinidx_device" ]; then
+        cp -f "$romwinidx_device" "$romwinidx_sd"
+        log "romwinidx: saved to SD"
+    else
+        rm -f "$romwinidx_sd"
+    fi
+    rm -f "$romwinidx_dirty"
+    sync
+}
+
 check_off_order() {
     if [ -f /tmp/.offOrder ]; then
         touch /tmp/shutting_down
+        save_romwinidx
 
         #EmuDeck - CheckOff scripts
         check_off_scripts=$(find "$sysdir/checkoff" -type f -name "*.sh")
@@ -670,14 +941,14 @@ check_hide_recents() {
     if [ ! -f $sysdir/config/.showRecents ]; then
         # Hide recents by removing the json file
         if [ -f $recentlist ]; then
-            cat $recentlist $recentlist_hidden > $recentlist_temp
+            cat $recentlist $recentlist_hidden 2>/dev/null | head -n 200 > $recentlist_temp
             mv -f $recentlist_temp $recentlist_hidden
             rm -f $recentlist
         fi
     else
         # Restore recentlist
         if [ -f $recentlist_hidden ]; then
-            cat $recentlist $recentlist_hidden > $recentlist_temp
+            cat $recentlist $recentlist_hidden 2>/dev/null | head -n 200 > $recentlist_temp
             mv -f $recentlist_temp $recentlist
             rm -f $recentlist_hidden
         fi
@@ -711,19 +982,22 @@ mount_main_ui() {
 #   times out after 5 seconds, defaults to 640x480
 #
 get_screen_resolution() {
-    max_attempts=10
+    # Poll at 100ms rather than 500ms, keeping the same 5 second ceiling. The
+    # coarse interval could add almost half a second after the driver was
+    # already up. Log the total instead of each attempt: at this interval a
+    # per-attempt line would spawn date and tee up to 50 times per boot.
+    max_attempts=50
     attempt=0
 
     log "get_screen_resolution: start"
     while [ "$attempt" -lt "$max_attempts" ]; do
-        screen_resolution=$(grep 'Current TimingWidth=' /proc/mi_modules/fb/mi_fb0 | sed 's/Current TimingWidth=\([0-9]*\),TimingWidth=\([0-9]*\),.*/\1x\2/')
+        screen_resolution=$(grep 'Current TimingWidth=' /proc/mi_modules/fb/mi_fb0 2> /dev/null | sed 's/Current TimingWidth=\([0-9]*\),TimingWidth=\([0-9]*\),.*/\1x\2/')
         if [ -n "$screen_resolution" ]; then
-            log "get_screen_resolution: success, resolution: $screen_resolution"
+            log "get_screen_resolution: success after $attempt polls, resolution: $screen_resolution"
             break
         fi
-        log "get_screen_resolution: attempt $attempt failed"
         attempt=$((attempt + 1))
-        sleep 0.5
+        sleep 0.1
     done
 
     if [ -z "$screen_resolution" ]; then
@@ -731,7 +1005,19 @@ get_screen_resolution() {
         touch /tmp/get_screen_resolution_failed
     fi
 
-    if [ "$screen_resolution" = "752x560" ] && [ "$(/etc/fw_printenv miyoo_version | cut -d'=' -f2)" -ge "202310271401" ]; then
+    if [ -f "$sysdir/config/.force640Res" ]; then
+        log "get_screen_resolution: .force640Res set, forcing 640x480"
+        rm -f /tmp/new_res_available
+        screen_resolution="640x480"
+
+        if [ -x "$sysdir/bin/fbmode" ]; then
+            if ! $sysdir/bin/fbmode 640x480 --pages 3 --preclear --no-clear \
+                --linger 150 --timeout 800; then
+                log "fbmode failed in forced 640 mode, falling back to fbset"
+                fbset -g 640 480 640 1440 32
+            fi
+        fi
+    elif [ "$screen_resolution" = "752x560" ] && [ "$(/etc/fw_printenv miyoo_version | cut -d'=' -f2)" -ge "202310271401" ]; then
         touch /tmp/new_res_available
     else
         # can't use 752x560 without appropriate firmware or screen
@@ -806,6 +1092,18 @@ init_system() {
     echo 1 > /sys/class/pwm/pwmchip0/pwm0/enable
 
     get_screen_resolution
+
+    # Establish MainUI's layout before the boot screen is drawn. Doing it here
+    # means the boot screen is painted in the mode MainUI will use, so nothing
+    # has to clear it later and it stays up until MainUI paints over it. On
+    # 640-only devices this is skipped and behaviour is unchanged.
+    if [ -f /tmp/new_res_available ] && [ -x "$sysdir/bin/fbmode" ]; then
+        if ! $sysdir/bin/fbmode 640x480 --pages 3 --preclear --no-clear \
+            --linger 150 --timeout 500; then
+            log "fbmode failed preparing MainUI layout, falling back to fbset"
+            fbset -g 640 480 640 1440 32
+        fi
+    fi
 }
 
 device_uuid=$(read_uuid)

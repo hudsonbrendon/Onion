@@ -23,6 +23,7 @@
 #include "./icons.h"
 #include "./network.h"
 #include "./reset.h"
+#include "./screen_time_ui.h"
 #include "./tools.h"
 #include "./values.h"
 
@@ -102,7 +103,7 @@ void menu_datetime(void *_)
 
         network_loadState();
 
-        if (DEVICE_ID == MIYOO354 || network_state.ntp) {
+        if (HAS_WIFI() || network_state.ntp) {
             list_addItemWithInfoNote(&_menu_date_time,
                                      (ListItem){
                                          .label = "Set automatically via internet",
@@ -112,7 +113,7 @@ void menu_datetime(void *_)
                                      "Use the internet connection to sync\n"
                                      "date and time on startup.");
         }
-        if (DEVICE_ID == MIYOO354) {
+        if (HAS_WIFI()) {
             list_addItemWithInfoNote(&_menu_date_time,
                                      (ListItem){
                                          .label = "Wait for sync on startup",
@@ -182,7 +183,7 @@ void menu_datetime(void *_)
 void menu_system(void *_)
 {
     if (!_menu_system._created) {
-        _menu_system = list_createWithTitle(6, LIST_SMALL, "System");
+        _menu_system = list_createWithTitle(7, LIST_SMALL, "System");
         list_addItem(&_menu_system,
                      (ListItem){
                          .label = "Startup...",
@@ -195,6 +196,10 @@ void menu_system(void *_)
                      (ListItem){
                          .label = "Date and time...",
                          .action = menu_datetime});
+        list_addItem(&_menu_system,
+                     (ListItem){
+                         .label = "Screen time...",
+                         .action = menu_screenTime});
         list_addItemWithInfoNote(&_menu_system,
                                  (ListItem){
                                      .label = "Low battery warning",
@@ -216,6 +221,19 @@ void menu_system(void *_)
                                      .action = action_setLowBatteryAutoSave},
                                  "Set the battery percentage at which the\n"
                                  "system should save and exit RetroArch.");
+        // Flip-specific: Lid close action
+        if (DEVICE_ID == MIYOO285) {
+            list_addItemWithInfoNote(&_menu_system,
+                                     (ListItem){
+                                         .label = "Lid close action",
+                                         .item_type = MULTIVALUE,
+                                         .value_max = 2,
+                                         .value_labels = {"Suspend", "Shutdown", "Nothing"},
+                                         .value = settings.lid_close_action,
+                                         .action = action_setLidCloseAction},
+                                     "Choose what happens when \n"
+                                     "you close the lid.");
+        }
         list_addItemWithInfoNote(&_menu_system,
                                  (ListItem){
                                      .label = "Vibration intensity",
@@ -491,7 +509,7 @@ void menu_themeOverrides(void *_)
 
 void menu_blueLight(void *_)
 {
-    bool schedule_show = (DEVICE_ID == MIYOO354 || settings.rtc_available || settings.blue_light_schedule);
+    bool schedule_show = (HAS_WIFI() || settings.rtc_available || settings.blue_light_schedule);
     bool schedule_disable = (!settings.rtc_available && !network_state.ntp && !settings.blue_light_schedule);
     if (!_menu_user_blue_light._created) {
         network_loadState();
@@ -927,6 +945,12 @@ void menu_tools(void *_)
                                      .action = tool_sortAppsZA},
                                  "Use this tool to sort your App list\n"
                                  "descending from Z to A.\n");
+        list_addItemWithInfoNote(&_menu_tools,
+                                 (ListItem){
+                                     .label = "Restore all deleted activity tracker entries",
+                                     .action = tool_restorePlayActivityHiddenEntries},
+                                 "Use this tool to restore all previously\n"
+                                 "deleted activity tracker entries.\n");
     }
     menu_stack[++menu_level] = &_menu_tools;
     header_changed = true;
@@ -961,7 +985,7 @@ void menu_main(void)
                          .description = "Startup, save and exit, vibration",
                          .action = menu_system,
                          .icon_ptr = _get_menu_icon("tweaks_system")});
-        if (DEVICE_ID == MIYOO354) {
+        if (IS_MIYOO_PLUS_OR_FLIP()) {
             list_addItem(&_menu_main,
                          (ListItem){
                              .label = "Network",

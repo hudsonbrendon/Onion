@@ -15,6 +15,7 @@ export PATH="$sysdir/bin:$PATH"
 unset LD_PRELOAD
 
 MODEL_MM=283
+MODEL_MMF=285
 MODEL_MMP=354
 
 install_ra=1
@@ -33,6 +34,14 @@ main() {
         cat /proc/ls
         sleep 1
     fi
+
+    # installUI has a fixed 640x480 layout and nothing up to this point has
+    # established a framebuffer geometry, so it starts on whatever the
+    # firmware left active. Clear before the change, not after: the
+    # firmware's contents would otherwise be scanned out at the new stride
+    # until installUI paints over them.
+    dd if=/dev/zero of=/dev/fb0 bs=1M 2> /dev/null
+    fbset -g 640 480 640 960 32
 
     check_device_model
     check_install_ra
@@ -142,7 +151,14 @@ cleanup() {
 DEVICE_ID=0
 
 check_device_model() {
-    DEVICE_ID=$([ -f /customer/app/axp_test ] && echo $MODEL_MMP || echo $MODEL_MM)
+    # Check for hall sensor (more reliable) OR event1 for Flip detection
+    if [ -e /sys/devices/soc0/soc/soc:hall-mh248/hallvalue ] || [ -e /dev/input/event1 ]; then
+        DEVICE_ID=$MODEL_MMF
+    elif [ -f /customer/app/axp_test ]; then
+        DEVICE_ID=$MODEL_MMP
+    else
+        DEVICE_ID=$MODEL_MM
+    fi
     echo -n "$DEVICE_ID" > /tmp/deviceModel
 }
 
@@ -494,14 +510,33 @@ install_configs() {
     mv -f ./temp_keymap.json /mnt/SDCARD/.tmp_update/config/keymap.json
 }
 
+finalize_and_reboot() {
+    sync
+    cd /
+
+    # The installer chain all runs from the card, so install.sh cannot
+    # unmount it itself. bin/shutdown copies itself to /tmp and re-runs
+    # detached, which is what lets it kill the processes holding the mount
+    # and unmount cleanly. It exists once onion.pak has been extracted.
+    if [ -x /mnt/SDCARD/.tmp_update/bin/shutdown ]; then
+        /mnt/SDCARD/.tmp_update/bin/shutdown -r
+        sleep 10
+    fi
+
+    # Reached only before or during extraction, where far less has been
+    # written than a completed install.
+    umount -r /mnt/SDCARD 2> /dev/null
+    reboot
+    sleep 10
+}
+
 check_firmware() {
     echo ":: Check firmware"
     if [ ! -f /customer/lib/libpadsp.so ]; then
         cd $sysdir
         infoPanel -i "res/firmware.png"
         rm -rf $sysdir
-        reboot
-        sleep 10
+        finalize_and_reboot
         exit 0
     fi
 }
@@ -703,9 +738,7 @@ unzip_progress() {
     if [ "$extraction_status" -ne 0 ]; then
         touch $sysdir/.installFailed
         echo ":: Installation failed!"
-        sync
-        reboot
-        sleep 10
+        finalize_and_reboot
         exit 0
     else
         echo "$msg 100%" >> /tmp/.update_msg
@@ -720,6 +753,4 @@ free_mma() {
 }
 
 main
-sync
-reboot
-sleep 10
+finalize_and_reboot
