@@ -2,7 +2,8 @@ TEST = 1
 INCLUDE_UTILS = 0
 CFILES := ../../src/common/utils/log.c ../../src/common/utils/file.c ../../src/common/utils/str.c
 include ../../src/common/config.mk
-CXXFLAGS := -I../../src/common $(CXXFLAGS)
+# playActivityDB.h passes string literals as char *
+CXXFLAGS := -I../../src/common $(CXXFLAGS) -Wno-write-strings
 
 TARGET = test_playActivity
 UNAME_S := $(shell uname -s)
