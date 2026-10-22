@@ -16,7 +16,9 @@
 
 #include "./cacheDB.h"
 
+#ifndef PLAY_ACTIVITY_DB_NEW_FILE
 #define PLAY_ACTIVITY_DB_NEW_FILE "/mnt/SDCARD/Saves/CurrentProfile/play_activity/play_activity_db.sqlite"
+#endif
 #define ROMS_FOLDER "/mnt/SDCARD/Roms"
 #define CMD_TO_RUN "/mnt/SDCARD/.tmp_update/cmd_to_run.sh"
 #define ROM_NOT_FOUND -1
@@ -48,18 +50,29 @@ struct PlayActivities {
 
 sqlite3 *play_activity_db = NULL;
 
-void get_rom_image_path(char *rom_file, char *out_image_path)
+// Box art is resolved at read time so a cover scraped after the game was
+// first played shows up. Prefer the scraper location (Roms/<system>/Imgs),
+// then the cache imgpath stored on the last launch (custom imgpath configs).
+void get_rom_image_path(const char *rom_file, const char *db_image_path, char *out_image_path)
 {
+    out_image_path[0] = '\0';
+
     if (str_endsWith(rom_file, ".p8") || str_endsWith(rom_file, ".png")) {
         snprintf(out_image_path, STR_MAX - 1, "/mnt/SDCARD/Roms/%s", rom_file);
         return;
     }
 
-    char *clean_rom_name = file_removeExtension(basename(rom_file));
-    char *rom_folder = strtok(rom_file, "/");
+    const char *slash = strchr(rom_file, '/');
+    if (slash != NULL) {
+        char *clean_rom_name = file_removeExtension(file_basename(rom_file));
+        snprintf(out_image_path, STR_MAX - 1, "/mnt/SDCARD/Roms/%.*s/Imgs/%s.png", (int)(slash - rom_file), rom_file, clean_rom_name);
+        free(clean_rom_name);
+        if (is_file(out_image_path))
+            return;
+    }
 
-    snprintf(out_image_path, STR_MAX - 1, "/mnt/SDCARD/Roms/%s/Imgs/%s.png", rom_folder, clean_rom_name);
-    free(clean_rom_name);
+    if (db_image_path != NULL && is_file(db_image_path))
+        snprintf(out_image_path, STR_MAX - 1, "%s", db_image_path);
 }
 
 void play_activity_db_close()
@@ -117,7 +130,7 @@ int play_activity_db_execute(char *sql)
     return rc;
 }
 
-sqlite3_stmt *play_activity_db_prepare(char *sql)
+sqlite3_stmt *play_activity_db_prepare(const char *sql)
 {
     printf_debug("play_activity_db_prepare(%s)\n", sql);
     if (play_activity_db == NULL) {
@@ -155,30 +168,30 @@ int play_activity_get_total_play_time(void)
 PlayActivities *play_activity_find_all(bool include_hidden)
 {
     PlayActivities *play_activities = NULL;
-    char *sql = include_hidden
-                    ? "SELECT * FROM ("
-                      "    SELECT rom.id, rom.type, rom.name, rom.file_path, rom.image_path, "
-                      "           COUNT(play_activity.ROWID) AS play_count_total, "
-                      "           SUM(play_activity.play_time) AS play_time_total, "
-                      "           SUM(play_activity.play_time)/COUNT(play_activity.ROWID) AS play_time_average, "
-                      "           datetime(MIN(play_activity.created_at), 'unixepoch') AS first_played_at, "
-                      "           datetime(MAX(play_activity.created_at), 'unixepoch') AS last_played_at "
-                      "    FROM rom LEFT JOIN play_activity ON rom.id = play_activity.rom_id "
-                      "    GROUP BY rom.id) "
-                      "WHERE play_time_total > 60 "
-                      "ORDER BY play_time_total DESC;"
-                    : "SELECT * FROM ("
-                      "    SELECT rom.id, rom.type, rom.name, rom.file_path, rom.image_path, "
-                      "           COUNT(play_activity.ROWID) AS play_count_total, "
-                      "           SUM(play_activity.play_time) AS play_time_total, "
-                      "           SUM(play_activity.play_time)/COUNT(play_activity.ROWID) AS play_time_average, "
-                      "           datetime(MIN(play_activity.created_at), 'unixepoch') AS first_played_at, "
-                      "           datetime(MAX(play_activity.created_at), 'unixepoch') AS last_played_at "
-                      "    FROM rom LEFT JOIN play_activity ON rom.id = play_activity.rom_id "
-                      "    WHERE (rom.deletion_id IS NULL OR play_activity.rowid > rom.deletion_id)"
-                      "    GROUP BY rom.id) "
-                      "WHERE play_time_total > 60 "
-                      "ORDER BY play_time_total DESC;";
+    const char *sql = include_hidden
+                          ? "SELECT * FROM ("
+                            "    SELECT rom.id, rom.type, rom.name, rom.file_path, rom.image_path, "
+                            "           COUNT(play_activity.ROWID) AS play_count_total, "
+                            "           SUM(play_activity.play_time) AS play_time_total, "
+                            "           SUM(play_activity.play_time)/COUNT(play_activity.ROWID) AS play_time_average, "
+                            "           datetime(MIN(play_activity.created_at), 'unixepoch') AS first_played_at, "
+                            "           datetime(MAX(play_activity.created_at), 'unixepoch') AS last_played_at "
+                            "    FROM rom LEFT JOIN play_activity ON rom.id = play_activity.rom_id "
+                            "    GROUP BY rom.id) "
+                            "WHERE play_time_total > 60 "
+                            "ORDER BY play_time_total DESC;"
+                          : "SELECT * FROM ("
+                            "    SELECT rom.id, rom.type, rom.name, rom.file_path, rom.image_path, "
+                            "           COUNT(play_activity.ROWID) AS play_count_total, "
+                            "           SUM(play_activity.play_time) AS play_time_total, "
+                            "           SUM(play_activity.play_time)/COUNT(play_activity.ROWID) AS play_time_average, "
+                            "           datetime(MIN(play_activity.created_at), 'unixepoch') AS first_played_at, "
+                            "           datetime(MAX(play_activity.created_at), 'unixepoch') AS last_played_at "
+                            "    FROM rom LEFT JOIN play_activity ON rom.id = play_activity.rom_id "
+                            "    WHERE (rom.deletion_id IS NULL OR play_activity.rowid > rom.deletion_id)"
+                            "    GROUP BY rom.id) "
+                            "WHERE play_time_total > 60 "
+                            "ORDER BY play_time_total DESC;";
     sqlite3_stmt *stmt;
 
     play_activity_db_open();
@@ -208,11 +221,12 @@ PlayActivities *play_activity_find_all(bool include_hidden)
         rom->id = sqlite3_column_int(stmt, 0);
         rom->type = strdup((const char *)sqlite3_column_text(stmt, 1));
         rom->name = strdup((const char *)sqlite3_column_text(stmt, 2));
+        rom->file_path = NULL;
+        rom->image_path = NULL;
         if (sqlite3_column_text(stmt, 3) != NULL) {
             rom->file_path = strdup((const char *)sqlite3_column_text(stmt, 3));
-            rom->image_path = malloc(STR_MAX * sizeof(char));
-            memset(rom->image_path, 0, STR_MAX);
-            get_rom_image_path(rom->file_path, rom->image_path);
+            rom->image_path = (char *)malloc(STR_MAX * sizeof(char));
+            get_rom_image_path(rom->file_path, (const char *)sqlite3_column_text(stmt, 4), rom->image_path);
         }
 
         entry->play_count = sqlite3_column_int(stmt, 5);
