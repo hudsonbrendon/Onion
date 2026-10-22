@@ -120,7 +120,7 @@ void renderGameName(AppState *state)
         if (state->surfaceGameName != NULL)
             SDL_FreeSurface(state->surfaceGameName);
 
-        state->surfaceGameName = TTF_RenderUTF8_Blended(resource_getFont(TITLE), game_name_str, color_white);
+        state->surfaceGameName = TTF_RenderUTF8_Blended(resource_getFontFor(TITLE, game_name_str), game_name_str, color_white);
 
         state->game_name_size.w = state->surfaceGameName->w < state->game_name_max_width ? state->surfaceGameName->w : state->game_name_max_width;
         state->game_name_size.h = state->surfaceGameName->h;

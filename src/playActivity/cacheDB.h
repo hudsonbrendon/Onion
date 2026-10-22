@@ -127,7 +127,9 @@ CacheDBItem *cache_db_find(const char *path_or_name)
         sql = sqlite3_mprintf("SELECT disp, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q ORDER BY path LIKE '%%%q' DESC LIMIT 1;", cache_type, rel_path, game_name, rel_path);
     }
     else if (cache_version == 6) {
-        sql = sqlite3_mprintf("SELECT pinyin, path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q ORDER BY path LIKE '%%%q' DESC LIMIT 1;", cache_type, rel_path, game_name, rel_path);
+        // `pinyin` is MainUI's ASCII sort key (CJK -> initials, accents dropped);
+        // `disp` is the name shown in the game list
+        sql = sqlite3_mprintf("SELECT COALESCE(NULLIF(disp, ''), pinyin), path, imgpath FROM %q_roms WHERE path LIKE '%%%q' OR disp = %Q ORDER BY path LIKE '%%%q' DESC LIMIT 1;", cache_type, rel_path, game_name, rel_path);
     }
     else {
         printf("No cache db found\n");
