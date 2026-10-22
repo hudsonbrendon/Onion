@@ -260,8 +260,10 @@ netplay_cleanup() {
         disable_flag hotspotState
     fi
 
-    # reset power save on the wifi ints
-    iw wlan0 set power_save on
+    # restore power save: wlan0 stays off like update_networking.sh::wifi_on
+    # sets it (power save on drops beacons on some routers, #14); wlan1 is
+    # only used by the hotspot
+    iw wlan0 set power_save off
     iw wlan1 set power_save on
 
     sync
