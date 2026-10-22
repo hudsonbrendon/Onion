@@ -14,8 +14,10 @@ fi
 sync
 
 # Save current Favourites + RecentList lists
-cp /mnt/SDCARD/Roms/*.json /mnt/SDCARD/Saves/CurrentProfile/lists
-rm /mnt/SDCARD/Roms/*.json
+# (lists/ may be missing on old profiles; stale copies must not come back)
+mkdir -p /mnt/SDCARD/Saves/CurrentProfile/lists
+rm -f /mnt/SDCARD/Saves/CurrentProfile/lists/*.json
+cp /mnt/SDCARD/Roms/*.json /mnt/SDCARD/Saves/CurrentProfile/lists/ && rm /mnt/SDCARD/Roms/*.json
 
 # Save current theme
 jq -r .theme "$json_file" > "$currentThemefile"

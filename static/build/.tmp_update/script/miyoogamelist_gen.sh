@@ -1,6 +1,8 @@
 #!/bin/sh
 
 rootdir="/mnt/SDCARD/Emu"
+romsdir="/mnt/SDCARD/Roms"
+labelmap=/tmp/miyoogamelist_labels.tsv
 
 clean_name() {
     name="$1"
@@ -73,10 +75,27 @@ generate_miyoogamelist() {
         <image>$imgpath/$filename.png</image>
     </game>
 EOF
+        printf '%s\t%s\t%s\n' "$PWD" "$rom" "$digest" >>"$labelmap"
     done
 
     echo '</gameList>' >>"$gamelistpath"
 }
+
+# Favourites and recents keep the label they were added with, so MainUI
+# never shows the new digest names there (#1584): rewrite matching entries.
+update_list_labels() {
+    [ -s "$labelmap" ] || return
+    jq -Rn '[inputs | split("\t") | {key: (.[0] + "/" + .[1]), value: .[2]}] | from_entries' \
+        "$labelmap" >"$labelmap.json" || return
+    for list in favourite.json recentlist.json recentlist-hidden.json; do
+        [ -f "$romsdir/$list" ] || continue
+        # ponytail: matched on emupath + ROM filename, not the resolved rompath
+        jq -c --slurpfile m "$labelmap.json" '.label = ($m[0][.emupath + "/" + (.rompath | split("/") | last)] // .label)' \
+            "$romsdir/$list" >"$romsdir/$list.tmp" && mv -f "$romsdir/$list.tmp" "$romsdir/$list"
+    done
+}
+
+rm -f "$labelmap"
 
 for system in "$rootdir"/*; do
     if [ -d "$system" ]; then
@@ -106,3 +125,6 @@ for system in "$rootdir"/*; do
         generate_miyoogamelist "$basepath" "$rompath" "$imgpath" "$extlist"
     fi
 done
+
+update_list_labels
+rm -f "$labelmap" "$labelmap.json"
