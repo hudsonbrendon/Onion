@@ -107,19 +107,14 @@ save_shortcut() {
 
     echo -e "\n[$target]\n   name: $full_name\n   d_name: $d_name"
 
-    image_path="$imgdir/$full_name.png"
-    if [ ! -f "$image_path" ]; then
-        image_path="$imgdir/$old_name.png"
-        if [ ! -f "$image_path" ]; then
-            image_path="$imgdir/$full_name_n.png"
-            if [ ! -f "$image_path" ]; then
-                image_path="$imgdir/$d_name.png"
-                if [ ! -f "$image_path" ]; then
-                    image_path="$imgdir/$d_name_n.png"
-                fi
-            fi
+    # box art may still use a name from an older importer version ('&' used to be stripped)
+    image_path=""
+    for n in "$full_name" "$(echo "$full_name" | tr -d '&')" "$old_name" "$full_name_n" "$d_name" "$d_name_n"; do
+        if [ -f "$imgdir/$n.png" ]; then
+            image_path="$imgdir/$n.png"
+            break
         fi
-    fi
+    done
 
     if [ $naming_mode -eq 0 ]; then
         name="$full_name"
@@ -150,7 +145,7 @@ save_shortcut() {
 }
 
 escape_filename() {
-    echo "$1" | sed -e 's/\s*:\s*/ - /g' | sed -e 's/\//, /g' | tr -cd "A-Z a-z0-9().,_'-"
+    echo "$1" | sed -e 's/\s*:\s*/ - /g' | sed -e 's/\//, /g' | tr -cd "A-Z a-z0-9().,&_'-"
 }
 
 escape_filename_old() {

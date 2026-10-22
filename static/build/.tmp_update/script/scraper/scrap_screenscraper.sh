@@ -397,6 +397,11 @@ if ! [ -z "$CurrentRom" ]; then
 fi
     
 
+# ScummVM games are folders of data files: only scrape the import shortcuts
+if [ "$CurrentSystem" = "SCUMMVM" ]; then
+    romfilter="$romfilter \\( -name '*.target' -o -name '*.scummvm' \\)"
+fi
+
 for file in $(eval "find /mnt/SDCARD/Roms/$CurrentSystem -maxdepth 2 -type f \
 	! -name '.*' ! -name '*.xml' ! -name '*.miyoocmd' ! -name '*.cfg' ! -name '*.db' \
 	! -path '*/Imgs/*' ! -path '*/.*/*' $romfilter"); do
