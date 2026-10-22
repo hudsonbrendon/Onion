@@ -44,6 +44,32 @@ TEST(CacheDB, FindPrefersExactPathOverSameName)
     system(("rm -rf " + root).c_str());
 }
 
+// cache6 `pinyin` is an ASCII sort key; the displayed name must come from
+// `disp` so CJK/accented titles survive (#34)
+TEST(CacheDB, FindReturnsDisplayNameNotPinyin)
+{
+    char tmpl[] = "/tmp/onion-cachedb-test-XXXXXX";
+    std::string root = mkdtemp(tmpl);
+    std::string gba = root + "/Roms/GBA";
+    mkdir((root + "/Roms").c_str(), 0777);
+    mkdir(gba.c_str(), 0777);
+
+    sqlite3 *db;
+    ASSERT_EQ(sqlite3_open((gba + "/GBA_cache6.db").c_str(), &db), SQLITE_OK);
+    std::string sql = "CREATE TABLE GBA_roms(disp TEXT, pinyin TEXT, path TEXT, imgpath TEXT);"
+                      "INSERT INTO GBA_roms VALUES('\xE6\x98\x9F\xE4\xB9\x8B Pok\xC3\xA9mon', 'xz Pok mon', '" +
+                      gba + "/a.gba', '');";
+    ASSERT_EQ(sqlite3_exec(db, sql.c_str(), NULL, NULL, NULL), SQLITE_OK);
+    sqlite3_close(db);
+
+    CacheDBItem *item = cache_db_find((gba + "/a.gba").c_str());
+    ASSERT_NE(item, nullptr);
+    EXPECT_STREQ(item->name, "\xE6\x98\x9F\xE4\xB9\x8B Pok\xC3\xA9mon");
+    free(item);
+
+    system(("rm -rf " + root).c_str());
+}
+
 static int count_rows(const char *sql)
 {
     int n = -1;

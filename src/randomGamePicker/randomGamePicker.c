@@ -140,7 +140,8 @@ bool pickRandomGameFromCache(char *emuname, char *romsdir,
 
     int count = getTotalGamesCount(db, table_name);
 
-    const char *sql = sqlite3_mprintf("SELECT id, pinyin, path, imgpath FROM "
+    const char *sql = sqlite3_mprintf("SELECT id, COALESCE(NULLIF(disp, ''), pinyin), "
+                                      "path, imgpath FROM "
                                       "%q WHERE type=0 AND path NOT LIKE "
                                       "'%%.miyoocmd' ORDER BY RANDOM() LIMIT 1",
                                       table_name);
@@ -225,7 +226,7 @@ bool addRandomFromJson(char *json_path)
 
     while (fgets(line, sizeof(line), fp)) {
         json_root = cJSON_Parse(line);
-        if(!json_getInt(json_root, "type", (int *)&type)) {
+        if (!json_getInt(json_root, "type", (int *)&type)) {
             print_debug("Malformed json; Skipping\n");
             continue;
         }

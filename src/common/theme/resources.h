@@ -320,6 +320,43 @@ TTF_Font *resource_getFont(ThemeFonts request)
     return resources.fonts[request];
 }
 
+// ponytail: BMP only, SDL_ttf 2.0 glyph lookup takes UCS-2
+static bool _fontHasGlyphs(TTF_Font *font, const char *text)
+{
+    const unsigned char *s = (const unsigned char *)text;
+    while (*s) {
+        Uint16 ch = *s++;
+        if (ch >= 0xF0) { // outside the BMP, can't be checked
+            while ((*s & 0xC0) == 0x80)
+                s++;
+            continue;
+        }
+        if (ch >= 0xE0 && s[0] && s[1]) {
+            ch = ((ch & 0x0F) << 12) | ((s[0] & 0x3F) << 6) | (s[1] & 0x3F);
+            s += 2;
+        }
+        else if (ch >= 0xC0 && s[0]) {
+            ch = ((ch & 0x1F) << 6) | (s[0] & 0x3F);
+            s += 1;
+        }
+        if (ch >= 0x80 && !TTF_GlyphIsProvided(font, ch))
+            return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Font `request`, or the list font (which MainUI uses for game names)
+ * when `request` can't render every character of `text`, e.g. CJK titles.
+ */
+TTF_Font *resource_getFontFor(ThemeFonts request, const char *text)
+{
+    TTF_Font *font = resource_getFont(request);
+    if (request == LIST || _fontHasGlyphs(font, text))
+        return font;
+    return resource_getFont(LIST);
+}
+
 void resource_reloadFont(ThemeFonts request)
 {
     if (resources.fonts[request] != NULL)
