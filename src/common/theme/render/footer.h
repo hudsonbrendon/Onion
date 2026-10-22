@@ -70,8 +70,8 @@ void theme_renderFooter(SDL_Surface *screen)
 
 static int old_status_width = -1;
 
-void theme_renderFooterStatus(SDL_Surface *screen, int current_num,
-                              int total_num)
+void theme_renderFooterStatusText(SDL_Surface *screen, const char *current_str,
+                                  const char *total_str)
 {
     if (old_status_width != -1) {
         SDL_Rect status_pos = theme_scaleRect((SDL_Rect){620, 420, 0, 60});
@@ -86,15 +86,7 @@ void theme_renderFooterStatus(SDL_Surface *screen, int current_num,
 
     TTF_Font *font_hint = resource_getFont(HINT);
 
-    if (total_num == 0)
-        current_num = 0;
-
-    char current_str[16];
-    sprintf(current_str, "%d/", current_num);
     SDL_Surface *current = TTF_RenderUTF8_Blended(font_hint, current_str, theme()->currentpage.color);
-
-    char total_str[16];
-    sprintf(total_str, "%d", total_num);
     SDL_Surface *total = TTF_RenderUTF8_Blended(font_hint, total_str, theme()->total.color);
 
     if (total) {
@@ -102,16 +94,32 @@ void theme_renderFooterStatus(SDL_Surface *screen, int current_num,
         SDL_Rect total_rect = {(int)(620.0 * g_scale) - total->w, (int)(449.0 * g_scale) - total->h / 2};
 
         SDL_BlitSurface(total, NULL, screen, &total_rect);
+        old_status_width = total->w;
         if (current) {
             current_rect.x = total_rect.x - current->w;
             current_rect.y = (int)(449.0 * g_scale) - current->h / 2;
-            old_status_width = total->w + current->w;
+            old_status_width += current->w;
             SDL_BlitSurface(current, NULL, screen, &current_rect);
             SDL_FreeSurface(current);
         }
 
         SDL_FreeSurface(total);
     }
+}
+
+void theme_renderFooterStatus(SDL_Surface *screen, int current_num,
+                              int total_num)
+{
+    if (total_num == 0)
+        current_num = 0;
+
+    char current_str[16];
+    sprintf(current_str, "%d/", current_num);
+
+    char total_str[16];
+    sprintf(total_str, "%d", total_num);
+
+    theme_renderFooterStatusText(screen, current_str, total_str);
 }
 
 void theme_renderListFooter(SDL_Surface *screen, int current_num, int total_num,

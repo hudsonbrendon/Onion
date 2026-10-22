@@ -213,7 +213,13 @@ static void *_save_thread(void *_)
         return NULL;
     }
 
-    int slot = g_save_state_info.slot_count > 0 ? g_save_state_info.slots[0] + 1 : 1;
+    // Use RetroArch's selected save slot, so the GameSwitcher follows the
+    // user's slot choice (and its wrap-around) instead of growing forever.
+    int slot = -1;
+    if (retroarch_getStateSlot(&slot) != 1 || slot < 0) {
+        // Fallback for when RetroArch doesn't answer: next free slot
+        slot = g_save_state_info.slot_count > 0 ? g_save_state_info.slots[0] + 1 : 1;
+    }
     printf_debug("Saving state to slot %d\n", slot);
 
     char stateFilePath[4096];
@@ -560,7 +566,14 @@ void renderPopMenu(AppState *state)
         theme_renderPopMenu(screen, state->view_mode == VIEW_NORMAL ? state->header_height : 0, &appState.pop_menu_list, transparent_bg);
 
         if (item != NULL && item->action_id == POP_MENU_ACTION_LOAD) {
-            theme_renderFooterStatus(screen, g_save_state_info.selected_slot + 1, g_save_state_info.slot_count);
+            // Show the real RetroArch slot number, not just the list position
+            char slot_str[32] = "";
+            if (g_save_state_info.slot_count > 0) {
+                snprintf(slot_str, sizeof(slot_str), "Slot %d  ", g_save_state_info.slots[g_save_state_info.selected_slot]);
+            }
+            char count_str[32];
+            snprintf(count_str, sizeof(count_str), "%d/%d", g_save_state_info.slot_count > 0 ? g_save_state_info.selected_slot + 1 : 0, g_save_state_info.slot_count);
+            theme_renderFooterStatusText(screen, slot_str, count_str);
         }
     }
 }
