@@ -10,7 +10,13 @@
 static const int PING_TIMEOUT_MS = 100;
 static const int MAX_RETRIES = 3;
 static const int RETRY_DELAY_MS = 500;
-static const int RECV_TIMEOUT_MS = 60000;
+#ifndef UDP_RECV_TIMEOUT_MS
+#define UDP_RECV_TIMEOUT_MS 60000
+#endif
+static const int RECV_TIMEOUT_MS = UDP_RECV_TIMEOUT_MS;
+
+// Returned when the command was delivered but no response arrived in time
+#define UDP_ERR_NO_RESPONSE -2
 
 static int _init_socket(const char *ipAddress, int port, int *socket_fd, struct sockaddr_in *server_address)
 {
@@ -122,11 +128,11 @@ static int _udp_send_receive(const char *ipAddress, int port, const char *messag
         return -1;
     }
 
-    ssize_t bytes_received = recvfrom(socket_fd, response, response_size, 0, NULL, NULL);
+    ssize_t bytes_received = recvfrom(socket_fd, response, response_size - 1, 0, NULL, NULL);
     if (bytes_received == -1) {
         perror("Failed to receive data");
         close(socket_fd);
-        return -1;
+        return UDP_ERR_NO_RESPONSE;
     }
 
     response[bytes_received] = '\0'; // Null-terminate the received string
@@ -149,8 +155,15 @@ int udp_send(const char *ipAddress, int port, const char *message)
 int udp_send_receive(const char *ipAddress, int port, const char *message, char *response, size_t response_size)
 {
     for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        if (_udp_send_receive(ipAddress, port, message, response, response_size) == 0) {
+        int ret = _udp_send_receive(ipAddress, port, message, response, response_size);
+        if (ret == 0) {
             return 0; // Success
+        }
+        if (ret == UDP_ERR_NO_RESPONSE) {
+            // The command was delivered and is still being processed (e.g. a
+            // save state while RetroArch is busy). Re-sending it would only
+            // queue the same command again and multiply the wait.
+            return -1;
         }
         usleep(RETRY_DELAY_MS * 1000); // Delay before retrying
     }
