@@ -132,6 +132,42 @@ setup() {
     assert_dir_not_exists "$SDCARD/Saves/MainProfile"
 }
 
+@test "Guest Mode: launch.sh keeps lists separate when profile has no lists dir (#184)" {
+    # Guest profile created before lists were per-profile
+    mkdir -p "$SDCARD/Saves/MainProfile/lists"
+    echo '{"main": "fav"}' > "$SDCARD/Saves/MainProfile/lists/favourite.json"
+    rm -rf "$SDCARD/Saves/CurrentProfile/lists"
+    echo '{"guest": "fav"}' > "$SDCARD/Roms/favourite.json"
+    echo '{"guest": "recent"}' > "$SDCARD/Roms/recentlist.json"
+
+    mock_date "1700000000"
+
+    cd "$SDCARD/App/Guest_Mode"
+    run sh ./launch.sh
+
+    assert_success
+    assert_file_contains "$SDCARD/Saves/GuestProfile/lists/favourite.json" '"guest": "fav"'
+    assert_file_contains "$SDCARD/Saves/GuestProfile/lists/recentlist.json" '"guest": "recent"'
+    assert_file_contains "$SDCARD/Roms/favourite.json" '"main": "fav"'
+    assert_file_not_exists "$SDCARD/Roms/recentlist.json"
+}
+
+@test "Guest Mode: launch.sh drops stale list copies from the saved profile" {
+    mkdir -p "$SDCARD/Saves/GuestProfile/lists"
+    echo '{"old": "recent"}' > "$SDCARD/Saves/CurrentProfile/lists/recentlist.json"
+    echo '{"main": "fav"}' > "$SDCARD/Roms/favourite.json"
+
+    mock_date "1700000000"
+
+    cd "$SDCARD/App/Guest_Mode"
+    run sh ./launch.sh
+
+    assert_success
+    assert_file_exists "$SDCARD/Saves/MainProfile/lists/favourite.json"
+    assert_file_not_exists "$SDCARD/Saves/MainProfile/lists/recentlist.json"
+    assert_file_not_exists "$SDCARD/Roms/favourite.json"
+}
+
 @test "Guest Mode: launch.sh calls themeSwitcher" {
     mkdir -p "$SDCARD/Saves/GuestProfile"
     mock_date "1700000000"
