@@ -162,20 +162,20 @@ M	overlay/GB-GBC/DMG-480P-mini.cfg	overlay/GB-GBC/Frame-Grid/DMG-480P-mini.cfg
 M	overlay/GB-GBC/DMG-480P-mini.png	overlay/GB-GBC/Frame-Grid/DMG-480P-mini.png
 M	overlay/GB-GBC/GB-shadow.cfg	overlay/GB-GBC/Frame-Grid/GB-shadow.cfg
 M	overlay/GB-GBC/GB-shadow2.cfg	overlay/GB-GBC/Frame-Grid/GB-shadow2.cfg
-M	"./overlay/GB-GBC/GBC-100%\346\267\261.cfg"	"./overlay/GB-GBC/Frame-Grid/GBC-100%\346\267\261.cfg"
-M	"./overlay/GB-GBC/GBC-100%\346\267\261.png"	"./overlay/GB-GBC/Frame-Grid/GBC-100%\346\267\261.png"
+M	overlay/GB-GBC/GBC-100%深.cfg	overlay/GB-GBC/Frame-Grid/GBC-100.cfg
+M	overlay/GB-GBC/GBC-100%深.png	overlay/GB-GBC/Frame-Grid/GBC-100.png
 M	overlay/GB-GBC/GBC-480P-final.cfg	overlay/GB-GBC/Frame-Grid/GBC-480P-final.cfg
 M	overlay/GB-GBC/GBC-480P-final.png	overlay/GB-GBC/Frame-Grid/GBC-480P-final.png
-M	"./overlay/GB-GBC/GBC-70%\346\267\261.cfg"	"./overlay/GB-GBC/Frame-Grid/GBC-70%\346\267\261.cfg"
-M	"./overlay/GB-GBC/GBC-70%\346\267\261.png"	"./overlay/GB-GBC/Frame-Grid/GBC-70%\346\267\261.png"
+M	overlay/GB-GBC/GBC-70%深.cfg	overlay/GB-GBC/Frame-Grid/GBC-70.cfg
+M	overlay/GB-GBC/GBC-70%深.png	overlay/GB-GBC/Frame-Grid/GBC-70.png
 M	overlay/GB-GBC/GBCL.cfg	overlay/GB-GBC/Frame-Grid/GBCL.cfg
 M	overlay/GB-GBC/GBCL.png	overlay/GB-GBC/Frame-Grid/GBCL.png
 M	overlay/GB-GBC/GBCL_grid.cfg	overlay/GB-GBC/Frame-Grid/GBCL_grid.cfg
 M	overlay/GB-GBC/GBCL_grid.png	overlay/GB-GBC/Frame-Grid/GBCL_grid.png
 M	overlay/GB-GBC/GB_sticker_grid.cfg	overlay/GB-GBC/Frame-Grid/GB_sticker_grid.cfg
 M	overlay/GB-GBC/GB_sticker_grid.png	overlay/GB-GBC/Frame-Grid/GB_sticker_grid.png
-M	overlay/GB-GBC/PAL GBP+D20.cfg	overlay/GB-GBC/Frame-Grid/PAL GBP+D20.cfg
-M	overlay/GB-GBC/PAL GBP+D20.png	overlay/GB-GBC/Frame-Grid/PAL GBP+D20.png
+M	overlay/GB-GBC/PAL GBP+D20.cfg	overlay/GB-GBC/Frame-Grid/PALGBP+D20.cfg
+M	overlay/GB-GBC/PAL GBP+D20.png	overlay/GB-GBC/Frame-Grid/PALGBP+D20.png
 M	overlay/GB-GBC/gb_grid.cfg	overlay/GB-GBC/Frame-Grid/gb_grid.cfg
 M	overlay/GB-GBC/gb_grid.png	overlay/GB-GBC/Frame-Grid/gb_grid.png
 M	overlay/GB-GBC/gb_grid_2.cfg	overlay/GB-GBC/Frame-Grid/gb_grid_2.cfg
