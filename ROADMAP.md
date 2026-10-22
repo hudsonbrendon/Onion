@@ -55,7 +55,7 @@ O projeto não morreu, o problema é que ninguém faz merge. Por isso o ganho ma
 | #1868 | Rodar ROMs em zip/7z (extrai para tmp) | #1787 |
 | #1430 | Activity Tracker com tema, rolagem e **apagar entradas** | #1326 |
 | #1923 | Screen Time (limite diário, PIN) | #1328 (parcial) |
-| #1910 | App Kids Mode | #1328 |
+| #1910 | App Kids Mode (**não entra**: Screen Time é o controle parental, ver #59) | #1328 |
 | #1918 | OTA por chunks (desync) | — |
 | #1949 / #1950 | Scraper: metadados de PBP do PSX | — |
 | #1919 | Overlays "Perfect" atualizados | — |
@@ -66,7 +66,7 @@ O projeto não morreu, o problema é que ninguém faz merge. Por isso o ganho ma
 
 Docs (#1954, #1955, #1927, #1920, #1911, #1912, #1898): dá pra fazer merge em lote.
 
-> Cuidado: #1923 (Screen Time) e #1910 (Kids Mode) se sobrepõem. Escolha um. O #1879 conflita conceitualmente com o #1897; entre primeiro com o #1897, que é menor.
+> Cuidado: #1923 (Screen Time) e #1910 (Kids Mode) se sobrepõem: ficou o Screen Time (#59). O #1879 conflita conceitualmente com o #1897; entre primeiro com o #1897, que é menor.
 
 ## Fase 2 — Bugs a corrigir (sem PR ainda)
 
