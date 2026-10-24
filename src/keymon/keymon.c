@@ -14,6 +14,7 @@
 
 #include "system/axp.h"
 #include "system/battery.h"
+#include "system/cpuclock.h"
 #include "system/device_model.h"
 #include "system/display.h"
 #include "system/keymap_hw.h"
@@ -496,21 +497,13 @@ void cpuClockHotkey(int adjust)
         return;
     }
     printf_debug("cpuClockHotkey: %d\n", adjust);
-    int min_cpu_clock = 500; // ?
-    int max_cpu_clock;
-    switch (DEVICE_ID) {
-    case MIYOO285:
-    case MIYOO354:
-        max_cpu_clock = 1800;
-        break;
-    case MIYOO283:
-        max_cpu_clock = 1600;
-        break;
-    default:
+    int min_cpu_clock = CPUCLOCK_MIN;
+    int max_cpu_clock = cpuclock_getMax();
+    if (max_cpu_clock == 0) {
         // Unknown device
         return;
     }
-    char cpuclockstr[5];
+    char cpuclockstr[STR_MAX];
 
     // Read current CPU clock
     int ret = process_start_read_return("cpuclock", cpuclockstr);
@@ -536,7 +529,7 @@ void cpuClockHotkey(int adjust)
     if (ret == 0) {
         printf_debug("Updated CPU clock: %s\n", cpuclockstr);
         char osd_txt[STR_MAX];
-        snprintf(osd_txt, STR_MAX, "CPU clock set to %s MHz", cpuclockstr);
+        snprintf(osd_txt, STR_MAX, "CPU clock set to %d MHz", atoi(cpuclockstr));
         SDL_Surface *surface = theme_createTextOverlay(osd_txt, (SDL_Color){255, 255, 255}, (SDL_Color){0, 0, 0}, 1.0, 10);
         if (surface && overlay_surface(surface, 10, 10, 1000, true) != 0) {
             SDL_FreeSurface(surface);
@@ -782,12 +775,12 @@ int main(void)
                 break;
             case HW_BTN_R1:
                 if (val == PRESSED && (button_flag & (SELECT | START)) == (SELECT | START)) {
-                    cpuClockHotkey(100);
+                    cpuClockHotkey(CPUCLOCK_STEP);
                 }
                 break;
             case HW_BTN_L1:
                 if (val == PRESSED && (button_flag & (SELECT | START)) == (SELECT | START)) {
-                    cpuClockHotkey(-100);
+                    cpuClockHotkey(-CPUCLOCK_STEP);
                 }
                 break;
             case HW_BTN_L2:

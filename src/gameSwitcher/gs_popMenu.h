@@ -2,9 +2,11 @@
 #define GAME_SWITCHER_POP_MENU_H__
 
 #include "components/list.h"
+#include "system/cpuclock.h"
 #include "system/lang.h"
 #include "theme/theme.h"
 #include "utils/file.h"
+#include "utils/process.h"
 #include "utils/retroarch_cmd.h"
 
 #include "gs_appState.h"
@@ -17,6 +19,7 @@
 #define POP_MENU_ACTION_LOAD 2
 #define POP_MENU_ACTION_EXIT 3
 #define POP_MENU_ACTION_FAVORITE 4
+#define POP_MENU_ACTION_CPUCLOCK 5
 
 typedef struct {
     int slots[10];
@@ -475,6 +478,93 @@ void action_toggleFavorite(void *self)
     appState.changed = true;
 }
 
+// Per-core CPU clock (MHz) stored in the core's cpuclock.txt, which
+// RetroArch applies on launch. 0 means no file (default clock).
+static int g_cpuclock = 0;
+
+static void _cpuclockPath(Game_s *game, char *out_path, size_t out_path_size)
+{
+    snprintf(out_path, out_path_size, CONFIG_DIR "/%s/cpuclock.txt", game->core_name);
+}
+
+static void _setCpuClockLabel(ListItem *item)
+{
+    if (g_cpuclock > 0) {
+        snprintf(item->label, sizeof(item->label), "CPU clock: %d MHz", g_cpuclock);
+    }
+    else {
+        snprintf(item->label, sizeof(item->label), "CPU clock: Default");
+    }
+}
+
+static void _readCpuClock(Game_s *game)
+{
+    char path[STR_MAX * 3];
+    FILE *fp;
+    g_cpuclock = 0;
+    _cpuclockPath(game, path, sizeof(path));
+    file_get(fp, path, "%d", &g_cpuclock);
+    if (g_cpuclock < 0) {
+        g_cpuclock = 0;
+    }
+}
+
+/**
+ * @brief Step the CPU clock, persist it for the core and apply it live
+ * when the game is running underneath the overlay.
+ */
+void popMenu_adjustCpuClock(ListItem *item, int adjust)
+{
+    Game_s *game = currentGame();
+    int clock = g_cpuclock;
+
+    if (clock == 0) {
+        // No saved value yet: start from the live clock
+        char out[STR_MAX];
+        process_start_read_return("cpuclock", out);
+        clock = atoi(out);
+        if (clock <= 0) {
+            clock = 1200;
+        }
+    }
+
+    clock += adjust;
+    if (clock < CPUCLOCK_MIN) {
+        clock = CPUCLOCK_MIN;
+    }
+    if (clock > cpuclock_getMax()) {
+        clock = cpuclock_getMax();
+    }
+
+    char path[STR_MAX * 3];
+    FILE *fp;
+    snprintf(path, sizeof(path), CONFIG_DIR "/%s", game->core_name);
+    mkdirs(path);
+    _cpuclockPath(game, path, sizeof(path));
+    file_put_sync(fp, path, "%d", clock);
+    g_cpuclock = clock;
+
+    if (game->is_running) {
+        char cmd[32];
+        snprintf(cmd, sizeof(cmd), "cpuclock %d", clock);
+        system(cmd);
+    }
+
+    _setCpuClockLabel(item);
+}
+
+// A on the CPU clock item drops the saved value (back to default)
+void action_resetCpuClock(void *self)
+{
+    char path[STR_MAX * 3];
+    _cpuclockPath(currentGame(), path, sizeof(path));
+    remove(path);
+    sync();
+    g_cpuclock = 0;
+    _setCpuClockLabel((ListItem *)self);
+    appState.changed = true;
+}
+
 void action_exitToMenu(void *_)
 {
     appState.exit_to_menu = true;
@@ -496,9 +586,12 @@ void popMenu_create(void)
     const bool has_save = _isSaveEnabled();
     const bool has_load = _isLoadEnabled();
 
-    // Five items are currently possible. Keep one spare slot so a future
+    // ponytail: only RetroArch games (core_name known) read cpuclock.txt
+    const bool has_cpuclock = strlen(currentGame()->core_name) > 0 && cpuclock_getMax() > 0;
+
+    // Six items are currently possible. Keep one spare slot so a future
     // conditional item cannot silently write past the allocation.
-    appState.pop_menu_list = list_create(6, LIST_SMALL);
+    appState.pop_menu_list = list_create(7, LIST_SMALL);
 
     list_addItemWithLang(&appState.pop_menu_list,
                          (ListItem){.label = LANG_FALLBACK_RESUME, .action = action_resumeGame, .action_id = POP_MENU_ACTION_RESUME},
@@ -521,6 +614,16 @@ void popMenu_create(void)
         (ListItem){.action = action_toggleFavorite, .action_id = POP_MENU_ACTION_FAVORITE});
     if (favorite_item != NULL) {
         _setFavoriteLabel(favorite_item, favorites_contains(currentGame()));
+    }
+
+    if (has_cpuclock) {
+        ListItem *cpuclock_item = list_addItem(
+            &appState.pop_menu_list,
+            (ListItem){.action = action_resetCpuClock, .action_id = POP_MENU_ACTION_CPUCLOCK});
+        if (cpuclock_item != NULL) {
+            _readCpuClock(currentGame());
+            _setCpuClockLabel(cpuclock_item);
+        }
     }
 
     list_addItemWithLang(&appState.pop_menu_list,
