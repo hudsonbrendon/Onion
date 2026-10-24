@@ -185,6 +185,25 @@ Currently, there's no fix due to MainUI being closed source however there are va
 
 <details><summary>
 
+### My <u>Wi-Fi doesn't show up or drops</u> on some routers, what can I try?
+
+</summary>
+
+The Wi-Fi chip is 2.4 GHz only and some access point settings are known to cause trouble with its driver. Things that have helped users:
+
+- Make sure the 2.4 GHz band is enabled and, if possible, give it its own SSID (a combined 2.4/5 GHz "smart connect" network can steer the device away)
+- Phone hotspots: enable "Maximize compatibility" (iPhone) or force the 2.4 GHz band (Android)
+- Change the wireless mode: some routers in "mixed" b/g/n mode fail at the handshake or DHCP step. Users reported success with **802.11n only** on some routers and **802.11b/g** on others, so try both
+- Use WPA2-Personal (AES) instead of WPA/WPA2 mixed or WPA3 / WPA2-WPA3 transition mode
+- Use a channel between 1 and 11; channels 12 and 13 may not be scanned
+- Avoid special characters in the SSID and password (see above)
+
+If it still won't connect, enable **Tweaks** › **Advanced** › **Diagnostics** › **Enable global logging** and attach `.tmp_update/logs/update_networking.log` along with the output of `wpa_cli status` and `dmesg` (from the Terminal app) to a bug report.
+
+</details>
+
+<details><summary>
+
 ### How to make the audio with <u>headphones louder</u>?
 
 </summary>

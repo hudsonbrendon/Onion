@@ -550,6 +550,15 @@ launch_game() {
             if [ -f /tmp/new_res_available ] && [ -f "$full_resolution_path" ]; then
                 log "Found full_resolution file, changing resolution to 560p"
                 change_resolution
+            elif [ -f /tmp/new_res_available ] && [ -x "$sysdir/bin/fbmode" ] &&
+                ! grep -qi retroarch $sysdir/cmd_to_run.sh "$launch_script" 2> /dev/null &&
+                [ "$($sysdir/bin/fbmode --probe 2> /dev/null | cut -d' ' -f1)" != "640x480" ]; then
+                # A GameSwitcher/quick-switch handoff leaves the framebuffer at
+                # 752x560. Standalone apps without a full_resolution marker
+                # (e.g. GnGeo) draw at a hardcoded 640x480 and end up offset
+                # (#33). RetroArch picks its own mode, so it is left alone.
+                log "No full_resolution file, restoring 640x480"
+                change_resolution "640x480"
             fi
 
             if [ $is_game -eq 1 ] && [ ! -f /tmp/new_res_available ]; then
