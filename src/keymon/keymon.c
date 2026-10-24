@@ -281,8 +281,18 @@ void quit(int exitcode)
 //
 //    Shutdown
 //
+// Show "Shutting down..." until power off (#51); bootScreen may draw underneath
+void show_shutdown_osd(void)
+{
+    SDL_Surface *surface = theme_createTextOverlay("Shutting down...", (SDL_Color){255, 255, 255}, (SDL_Color){0, 0, 0}, 1.0, 10);
+    if (surface && overlay_surface(surface, 10, 10, 0, true) != 0) {
+        SDL_FreeSurface(surface);
+    }
+}
+
 void force_shutdown(void)
 {
+    show_shutdown_osd();
     set_system_shutdown();
     screenshot_system();
     terminate_retroarch();
@@ -323,6 +333,7 @@ void deepsleep(void)
     }
 
     short_pulse();
+    show_shutdown_osd();
     set_system_shutdown();
 
     if (system_state == MODE_MAIN_UI) {
